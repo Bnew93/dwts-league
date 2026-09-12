@@ -21,7 +21,7 @@ type Props = {
 
 type Tab = "available" | "board" | "team";
 
-const OWNER_COLORS = ["bg-sky-500", "bg-rose-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500", "bg-teal-500"];
+import { OWNER_BG as OWNER_COLORS } from "@/lib/colors";
 
 export function DraftRoom({ league: initialLeague, members, me, isCommissioner, initialCouples, initialPicks }: Props) {
   const router = useRouter();

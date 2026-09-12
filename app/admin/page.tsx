@@ -125,6 +125,15 @@ export default async function AdminPage() {
         )}
       </section>
 
+      {/* Results */}
+      <section className={card}>
+        <h2 className={h2}>Results</h2>
+        <p className="mt-2 text-sm text-zinc-300">Manual eliminations, placements, and undo. Automated ingestion arrives in Phase 3.</p>
+        <a href="/admin/results" className={`${btn} mt-3 inline-block`}>
+          Results override
+        </a>
+      </section>
+
       {/* Settings */}
       <section className={card}>
         <h2 className={h2}>Settings</h2>
