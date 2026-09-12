@@ -1,0 +1,89 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { getCtx } from "@/lib/league";
+
+async function requireCommissioner() {
+  const ctx = await getCtx();
+  if (!ctx.isCommissioner) throw new Error("commissioner only");
+  return ctx;
+}
+
+const settingsSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  roster_size: z.coerce.number().int().min(1).max(10),
+  pick_seconds: z.coerce.number().int().min(15).max(600),
+});
+
+export async function saveSettings(formData: FormData): Promise<void> {
+  const ctx = await requireCommissioner();
+  if (ctx.league.draft_status !== "pending") throw new Error("settings are locked once the draft starts");
+  const s = settingsSchema.parse(Object.fromEntries(formData));
+  const supabase = await createClient();
+  const { error } = await supabase.from("leagues").update(s).eq("id", ctx.league.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+}
+
+const emailSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  display_name: z.string().trim().max(40).optional().transform((v) => v || null),
+});
+
+export async function addAllowedEmail(formData: FormData): Promise<void> {
+  const ctx = await requireCommissioner();
+  const { email, display_name } = emailSchema.parse(Object.fromEntries(formData));
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("allowed_emails")
+    .upsert({ email, display_name, league_id: ctx.league.id, is_commissioner: false }, { onConflict: "email" });
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+}
+
+export async function removeAllowedEmail(formData: FormData): Promise<void> {
+  const ctx = await requireCommissioner();
+  const email = z.string().email().parse(formData.get("email"));
+  if (email.toLowerCase() === ctx.user.email?.toLowerCase()) throw new Error("cannot remove yourself");
+  const supabase = await createClient();
+  const { error } = await supabase.from("allowed_emails").delete().eq("email", email);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+}
+
+export async function saveCastOrder(formData: FormData): Promise<void> {
+  const ctx = await requireCommissioner();
+  if (ctx.league.draft_status !== "pending") throw new Error("cast order is locked once the draft starts");
+  const supabase = await createClient();
+  const updates: { id: string; cast_order: number }[] = [];
+  for (const [k, v] of formData.entries()) {
+    const m = /^order:(.+)$/.exec(k);
+    if (m) updates.push({ id: m[1], cast_order: z.coerce.number().int().min(1).parse(v) });
+  }
+  for (const u of updates) {
+    const { error } = await supabase.from("couples").update({ cast_order: u.cast_order }).eq("id", u.id);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath("/admin");
+}
+
+export async function startDraft(): Promise<void> {
+  const ctx = await requireCommissioner();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_start_draft", { p_league_id: ctx.league.id });
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  redirect("/draft");
+}
+
+export async function resetDraft(): Promise<void> {
+  const ctx = await requireCommissioner();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_reset_draft", { p_league_id: ctx.league.id });
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  redirect("/admin");
+}

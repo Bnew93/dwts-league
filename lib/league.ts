@@ -16,6 +16,7 @@ export type League = {
   pick_seconds: number;
   draft_status: "pending" | "live" | "complete";
   draft_order: string[] | null;
+  draft_rng_seed: string | null;
   current_pick: number;
   turn_started_at: string | null;
   season_complete: boolean;
@@ -62,7 +63,7 @@ export async function getCtx(): Promise<Ctx> {
   const { data: league } = await supabase
     .from("leagues")
     .select(
-      "id, name, season, roster_size, pick_seconds, draft_status, draft_order, current_pick, turn_started_at, season_complete",
+      "id, name, season, roster_size, pick_seconds, draft_status, draft_order, draft_rng_seed, current_pick, turn_started_at, season_complete",
     )
     .eq("id", membership.league_id)
     .single();
