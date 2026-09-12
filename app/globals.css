@@ -195,6 +195,65 @@ h1, h2.display, .display { font-family: var(--font-display); }
 .stagger > *:nth-child(8) { animation-delay: 315ms; }
 .stagger > *:nth-child(n + 9) { animation-delay: 360ms; }
 
+/* ---------------------------------------------------------------------------
+   Draft lobby — the dance floor
+   --------------------------------------------------------------------------- */
+.lobby {
+  --lane: 200px;
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgb(233 194 80 / 0.28), transparent 70%),
+    radial-gradient(35% 30% at 12% 8%, rgb(184 58 209 / 0.2), transparent 70%),
+    radial-gradient(35% 30% at 88% 8%, rgb(184 58 209 / 0.16), transparent 70%),
+    linear-gradient(180deg, #170c25 0%, #0e0716 55%, #150b10 100%);
+}
+.lobby::before { /* curtain folds */
+  content: ""; position: absolute; inset: 0 0 45% 0; opacity: 0.35;
+  background: repeating-linear-gradient(90deg, rgb(30 24 90 / 0.35) 0 26px, rgb(14 10 60 / 0.35) 26px 52px);
+  mask-image: linear-gradient(180deg, black, transparent); -webkit-mask-image: linear-gradient(180deg, black, transparent);
+}
+.lobby-floor {
+  position: absolute; left: -10%; right: -10%; bottom: 0; height: 46%; pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent, rgb(120 72 30 / 0.25) 35%, rgb(60 34 14 / 0.6) 100%),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.035) 0 2px, transparent 2px 56px),
+    repeating-linear-gradient(180deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 34px);
+  transform: perspective(600px) rotateX(55deg); transform-origin: 50% 100%;
+}
+.lobby-spot {
+  position: absolute; top: -30%; width: 40%; height: 110%; pointer-events: none; filter: blur(8px);
+  background: radial-gradient(40% 55% at 50% 0%, rgb(255 236 170 / 0.28), transparent 70%);
+  animation: lobby-sweep 11s ease-in-out infinite alternate;
+}
+@keyframes lobby-sweep { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.lobby-lane { display: flex; gap: 18px; width: max-content; will-change: transform; animation: lobby-drift 70s linear infinite; }
+@keyframes lobby-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.lobby-poster {
+  margin: 0; position: relative; width: calc(var(--lane) * 0.75); height: var(--lane); flex: 0 0 auto; border-radius: 14px; overflow: hidden;
+  border: 1px solid rgb(233 194 80 / 0.25); box-shadow: 0 20px 40px -20px rgb(0 0 0 / 0.9), 0 0 0 1px rgb(14 7 22 / 0.4);
+}
+.lobby-poster img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.lobby-poster::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgb(14 7 22 / 0.05), transparent 45%, rgb(14 7 22 / 0.85)); }
+.lobby-poster figcaption { position: absolute; left: 10px; right: 10px; bottom: 8px; z-index: 2; display: grid; line-height: 1.1; }
+.lobby-poster b { font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--color-silver-100); text-shadow: 0 2px 10px rgb(0 0 0 / 0.7); }
+.lobby-poster small { font-size: 10.5px; color: var(--color-silver-300); }
+.lobby-reflect {
+  position: absolute; left: 0; right: 0; bottom: -6px; height: 110px; pointer-events: none; overflow: hidden; opacity: 0.28;
+  mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.7), transparent 90%); -webkit-mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.7), transparent 90%);
+}
+.lobby-scrim { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 60% at 50% 48%, rgb(14 7 22 / 0.92) 0%, rgb(14 7 22 / 0.75) 40%, transparent 75%); }
+.lobby-digit {
+  display: block; min-width: 2ch; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 700; font-size: clamp(40px, 9vw, 80px); line-height: 1;
+  letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--color-gold-200);
+  text-shadow: 0 0 30px rgb(233 194 80 / 0.55), 0 2px 0 rgb(0 0 0 / 0.4);
+  padding: 14px clamp(8px, 2vw, 22px) 12px; border-radius: 16px;
+  background: linear-gradient(180deg, rgb(34 18 58 / 0.85), rgb(14 7 22 / 0.85)); border: 1px solid rgb(233 194 80 / 0.35);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 20px 50px -20px rgb(233 194 80 / 0.5);
+}
+.lobby-colon { font-family: ui-monospace, monospace; font-size: clamp(32px, 7vw, 60px); color: rgb(233 194 80 / 0.5); padding-top: 18px; animation: lobby-blink 1s steps(2) infinite; }
+@keyframes lobby-blink { 50% { opacity: 0.2; } }
+@media (max-width: 640px) { .lobby { --lane: 150px; } }
+@media (prefers-reduced-motion: reduce) { .lobby-lane, .lobby-spot, .lobby-colon { animation: none !important; } }
+
 details > summary::-webkit-details-marker { display: none; }
 details[open] .chev { transform: rotate(180deg); }
 .chev { transition: transform 200ms ease; }

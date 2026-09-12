@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { fromZonedTime } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
 import { getCtx } from "@/lib/league";
 
@@ -25,7 +26,25 @@ export async function saveSettings(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("leagues").update(s).eq("id", ctx.league.id);
   if (error) throw new Error(error.message);
-  revalidatePath("/admin");
+  revalidatePath("/", "layout");
+}
+
+const scheduleSchema = z.object({
+  // datetime-local value, interpreted in Eastern time
+  scheduled: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).or(z.literal("")),
+});
+
+/** Estimated draft start (Eastern). Display only; the room opens on commissioner confirmation. */
+export async function saveSchedule(formData: FormData): Promise<void> {
+  const ctx = await requireCommissioner();
+  const { scheduled } = scheduleSchema.parse(Object.fromEntries(formData));
+  const iso = scheduled ? fromZonedTime(scheduled, "America/New_York").toISOString() : null;
+  const supabase = await createClient();
+  const { error } = await supabase.from("leagues").update({ draft_scheduled_at: iso }).eq("id", ctx.league.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  const back = formData.get("back");
+  if (typeof back === "string" && back.startsWith("/")) redirect(back);
 }
 
 const emailSchema = z.object({

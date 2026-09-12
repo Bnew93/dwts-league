@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Ctx } from "@/lib/league";
 import { Nav, type NavItem } from "./nav";
 
-export function Shell({ ctx, children, wide = false }: { ctx: Ctx; children: React.ReactNode; wide?: boolean }) {
+export function Shell({ ctx, children, wide = false, bare = false }: { ctx: Ctx; children: React.ReactNode; wide?: boolean; bare?: boolean }) {
   const { league, profile, isCommissioner } = ctx;
   const items: NavItem[] = [];
   if (league.draft_status !== "complete") items.push({ href: "/draft", label: "Draft", icon: "draft" });
@@ -27,7 +27,7 @@ export function Shell({ ctx, children, wide = false }: { ctx: Ctx; children: Rea
           )}
         </div>
       )}
-      <main className={`mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>
+      <main className={bare ? "w-full pb-20 sm:pb-0" : `mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>
     </>
   );
 }

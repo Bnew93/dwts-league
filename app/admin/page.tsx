@@ -6,7 +6,8 @@ import { Shell, PageTitle, SectionTitle } from "@/components/shell";
 import { CoupleFace } from "@/components/couple";
 import { leftoverCount } from "@/lib/draft";
 import type { Couple, AllowedEmail } from "@/lib/types";
-import { saveSettings, addAllowedEmail, removeAllowedEmail, saveCast, startDraft, resetDraft, startMockDraft, endMockDraft } from "./actions";
+import { formatInTimeZone } from "date-fns-tz";
+import { saveSettings, saveSchedule, addAllowedEmail, removeAllowedEmail, saveCast, startDraft, resetDraft, startMockDraft, endMockDraft } from "./actions";
 
 export default async function AdminPage() {
   const ctx = await getCtx();
@@ -103,6 +104,32 @@ export default async function AdminPage() {
               })}
             </ol>
           )}
+        </section>
+
+        {/* Schedule */}
+        <section className="glass p-4" id="schedule">
+          <SectionTitle>Draft night</SectionTitle>
+          <p className="text-sm text-silver-300">
+            Estimated start, shown as a countdown in the Draft Room lobby. Nothing starts automatically; you open the room with the button when everyone&apos;s
+            there.
+          </p>
+          <form action={saveSchedule} className="mt-3 flex flex-wrap items-end gap-3">
+            <label className="text-sm text-silver-300">
+              Start (Eastern)
+              <input
+                name="scheduled"
+                type="datetime-local"
+                defaultValue={league.draft_scheduled_at ? formatInTimeZone(new Date(league.draft_scheduled_at), "America/New_York", "yyyy-MM-dd'T'HH:mm") : ""}
+                className="input-dark mt-1 w-auto"
+              />
+            </label>
+            <button className="btn-gold">Save</button>
+            {league.draft_scheduled_at && (
+              <span className="text-xs text-silver-500">
+                Currently {formatInTimeZone(new Date(league.draft_scheduled_at), "America/New_York", "EEE, MMM d · h:mm a")} ET
+              </span>
+            )}
+          </form>
         </section>
 
         {/* Results */}

@@ -23,6 +23,7 @@ export type League = {
   turn_started_at: string | null;
   season_complete: boolean;
   is_mock: boolean;
+  draft_scheduled_at: string | null;
 };
 
 export { LEAGUE_COLUMNS };
