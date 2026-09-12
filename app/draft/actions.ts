@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCtx } from "@/lib/league";
@@ -24,7 +23,8 @@ export async function makePick(coupleId: string, asUserId?: string): Promise<Pic
     p_couple_id: id.data,
   });
   if (error) return { ok: false, error: friendly(error.message) };
-  revalidatePath("/draft");
+  // No revalidatePath here: the room refetches over Realtime, and a server re-render of
+  // /draft after the final pick would redirect to /standings before the curtain call plays.
   return { ok: true, pickNo: (data as { pick_no: number }).pick_no };
 }
 
