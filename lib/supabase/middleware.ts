@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// Public: login, OAuth return, and the share-card images crawlers fetch unauthenticated.
+const PUBLIC_PATHS = ["/login", "/auth", "/opengraph-image", "/twitter-image", "/icon"];
 
 /** Refreshes the Supabase session cookie and gates every non-public route behind login. */
 export async function updateSession(request: NextRequest) {
