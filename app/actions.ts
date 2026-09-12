@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /** Remember that the signed-in user has seen the elimination reveal for `key` ('<season>:<week>'). */
 export async function markRevealSeen(key: string): Promise<void> {
-  const k = z.string().regex(/^\d+:\d+$/).parse(key);
+  const k = z.string().regex(/^\d+:(\d+|final)$/).parse(key);
   const supabase = await createClient();
   const {
     data: { user },

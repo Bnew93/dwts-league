@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import type { Reveal } from "@/lib/reveal";
+import type { EliminationReveal as Data } from "@/lib/reveal";
 import { markRevealSeen } from "@/app/actions";
 
 /**
  * Once-per-elimination overlay: lights down, the couple's poster in a spotlight,
  * an "Eliminated · Week N" stamp, and whose roster took the hit.
  */
-export function EliminationReveal({ reveal, me }: { reveal: Reveal; me: string }) {
+export function EliminationReveal({ reveal, me }: { reveal: Data; me: string }) {
   const [open, setOpen] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const multi = reveal.couples.length > 1;

@@ -4,6 +4,7 @@ import type { Ctx } from "@/lib/league";
 import { getPendingReveal } from "@/lib/reveal";
 import { Nav, type NavItem } from "./nav";
 import { EliminationReveal } from "./elimination-reveal";
+import { FinaleReveal } from "./finale-reveal";
 
 export async function Shell({
   ctx,
@@ -34,7 +35,8 @@ export async function Shell({
   const reveal = fill ? null : await getPendingReveal(ctx);
   return (
     <Wrap {...wrapProps}>
-      {reveal && <EliminationReveal reveal={reveal} me={ctx.user.id} />}
+      {reveal?.type === "finale" && <FinaleReveal reveal={reveal} me={ctx.user.id} />}
+      {reveal?.type === "elimination" && <EliminationReveal reveal={reveal} me={ctx.user.id} />}
       <Nav items={items} leagueName={league.name} displayName={profile.display_name} avatarUrl={profile.avatar_url} />
       {league.is_mock && (
         <div className="bg-gold-400/15 px-4 py-1.5 text-center text-xs text-gold-200">
