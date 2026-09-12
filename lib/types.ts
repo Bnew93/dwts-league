@@ -31,5 +31,6 @@ export type AllowedEmail = {
   league_id: string;
   display_name: string | null;
   is_commissioner: boolean;
+  is_player: boolean;
   user_id: string | null;
 };

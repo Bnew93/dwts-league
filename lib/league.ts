@@ -29,12 +29,19 @@ export type League = {
 
 export { LEAGUE_COLUMNS };
 
+export type Member = Profile & { is_player: boolean };
+
 export type Ctx = {
   user: { id: string; email: string | null };
   profile: Profile;
   league: League;
-  members: Profile[];
+  /** everyone in the league, drafting or not */
+  members: Member[];
+  /** members who draft a team (draft order, standings) */
+  players: Member[];
   isCommissioner: boolean;
+  /** does the signed-in user draft a team? */
+  isPlayer: boolean;
 };
 
 /**
@@ -51,7 +58,7 @@ export async function getCtx(): Promise<Ctx> {
 
   const [{ data: profile, error: profileErr }, { data: membership, error: memberErr }] = await Promise.all([
     supabase.from("profiles").select("id, display_name, avatar_url, role, is_mock, last_reveal_key").eq("id", user.id).maybeSingle(),
-    supabase.from("league_members").select("league_id").eq("user_id", user.id).limit(1).maybeSingle(),
+    supabase.from("league_members").select("league_id, is_player").eq("user_id", user.id).limit(1).maybeSingle(),
   ]);
 
   // A transient query failure must not sign anyone out; only a confirmed "no membership" does.
@@ -70,18 +77,20 @@ export async function getCtx(): Promise<Ctx> {
 
   const { data: memberRows } = await supabase
     .from("league_members")
-    .select("profiles(id, display_name, avatar_url, role, is_mock)")
+    .select("is_player, profiles(id, display_name, avatar_url, role, is_mock)")
     .eq("league_id", league.id);
 
-  const members = (memberRows ?? [])
-    .map((r) => r.profiles as unknown as Profile)
-    .filter(Boolean);
+  const members: Member[] = (memberRows ?? [])
+    .filter((r) => r.profiles)
+    .map((r) => ({ ...(r.profiles as unknown as Profile), is_player: r.is_player as boolean }));
 
   return {
     user: { id: user.id, email: user.email ?? null },
     profile: profile as Profile,
     league: league as League,
     members,
+    players: members.filter((m) => m.is_player),
     isCommissioner: profile.role === "commissioner",
+    isPlayer: membership.is_player as boolean,
   };
 }

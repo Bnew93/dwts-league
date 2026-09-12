@@ -7,12 +7,12 @@ import { CoupleFace } from "@/components/couple";
 import { leftoverCount } from "@/lib/draft";
 import type { Couple, AllowedEmail } from "@/lib/types";
 import { formatInTimeZone } from "date-fns-tz";
-import { saveSettings, saveSchedule, addAllowedEmail, removeAllowedEmail, saveCast, startDraft, resetDraft, startMockDraft, endMockDraft } from "./actions";
+import { saveSettings, saveSchedule, addAllowedEmail, removeAllowedEmail, setPlayer, saveCast, startDraft, resetDraft, startMockDraft, endMockDraft } from "./actions";
 
 export default async function AdminPage() {
   const ctx = await getCtx();
   if (!ctx.isCommissioner) redirect("/standings");
-  const { league, members } = ctx;
+  const { league, members, players } = ctx;
   const supabase = await createClient();
 
   const [{ data: couples }, { data: allowed }] = await Promise.all([
@@ -23,8 +23,8 @@ export default async function AdminPage() {
   const allowlist = (allowed ?? []) as AllowedEmail[];
   const pending = league.draft_status === "pending";
   const activeCount = cast.filter((c) => c.status === "active").length;
-  const leftovers = leftoverCount(activeCount, members.length, league.roster_size);
-  const canStart = pending && members.length >= 2 && activeCount >= members.length * league.roster_size;
+  const leftovers = leftoverCount(activeCount, players.length, league.roster_size);
+  const canStart = pending && players.length >= 2 && activeCount >= players.length * league.roster_size;
 
   return (
     <Shell ctx={ctx}>
@@ -44,13 +44,14 @@ export default async function AdminPage() {
         <section className="glass border-gold-400/35 p-4">
           <SectionTitle>Draft</SectionTitle>
           <p className="text-sm text-silver-300">
-            {members.length} members × {league.roster_size} rounds = {members.length * league.roster_size} picks from {activeCount} couples →{" "}
-            {leftovers} leftover{leftovers === 1 ? "" : "s"}
+            {players.length} drafter{players.length === 1 ? "" : "s"} × {league.roster_size} rounds = {players.length * league.roster_size} picks from{" "}
+            {activeCount} couples → {leftovers} leftover{leftovers === 1 ? "" : "s"}
             {leftovers === 0 && " (replacement picks disabled)"}.
+            {members.length > players.length && ` ${members.length - players.length} admin-only member${members.length - players.length === 1 ? "" : "s"}.`}
           </p>
           {!canStart && pending && (
             <p className="mt-2 text-sm text-gold-300">
-              {members.length < 2 ? "Need at least 2 members signed in before starting." : "Not enough active couples for this roster size."}
+              {players.length < 2 ? "Need at least 2 drafting members signed in before starting." : "Not enough active couples for this roster size."}
             </p>
           )}
           {league.is_mock && (
@@ -176,22 +177,35 @@ export default async function AdminPage() {
                   <div className="text-xs text-silver-500">
                     {a.display_name ?? "—"}
                     {a.is_commissioner && " · commissioner"}
+                    {a.is_player ? " · drafts a team" : " · admin only"}
                   </div>
                 </div>
-                {a.is_commissioner ? null : a.user_id ? (
-                  <span className="text-xs text-emerald-300">signed in</span>
-                ) : (
-                  <form action={removeAllowedEmail}>
-                    <input type="hidden" name="email" value={a.email} />
-                    <button className="text-xs text-silver-500 underline hover:text-rose-300">remove</button>
-                  </form>
-                )}
+                <div className="flex shrink-0 items-center gap-3">
+                  {pending && (
+                    <form action={setPlayer}>
+                      <input type="hidden" name="email" value={a.email} />
+                      <input type="hidden" name="is_player" value={a.is_player ? "false" : "true"} />
+                      <button className="text-xs text-silver-500 underline hover:text-gold-300">{a.is_player ? "make admin-only" : "make drafter"}</button>
+                    </form>
+                  )}
+                  {a.is_commissioner ? null : a.user_id ? (
+                    <span className="text-xs text-emerald-300">signed in</span>
+                  ) : (
+                    <form action={removeAllowedEmail}>
+                      <input type="hidden" name="email" value={a.email} />
+                      <button className="text-xs text-silver-500 underline hover:text-rose-300">remove</button>
+                    </form>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
-          <form action={addAllowedEmail} className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <form action={addAllowedEmail} className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center">
             <input name="email" type="email" required placeholder="member@gmail.com" className="input-dark" />
             <input name="display_name" placeholder="Display name (optional)" className="input-dark" />
+            <label className="flex items-center gap-2 text-sm text-silver-300">
+              <input name="is_player" type="checkbox" defaultChecked className="h-4 w-4 accent-gold-400" /> Drafts a team
+            </label>
             <button className="btn-gold">Add</button>
           </form>
         </section>

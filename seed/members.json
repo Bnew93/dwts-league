@@ -1,6 +1,7 @@
 [
-  { "email": "billnewhart19@gmail.com", "display_name": "Bill", "commissioner": true },
-  { "email": "member2@gmail.com", "display_name": "Member 2", "commissioner": false },
-  { "email": "member3@gmail.com", "display_name": "Member 3", "commissioner": false },
-  { "email": "member4@gmail.com", "display_name": "Member 4", "commissioner": false }
+  { "email": "billnewhart19@gmail.com", "display_name": "Bill", "commissioner": true, "player": false },
+  { "email": "petaktara@gmail.com", "display_name": null, "commissioner": false, "player": true },
+  { "email": "member3@gmail.com", "display_name": "Member 3", "commissioner": false, "player": true },
+  { "email": "member4@gmail.com", "display_name": "Member 4", "commissioner": false, "player": true },
+  { "email": "member5@gmail.com", "display_name": "Member 5", "commissioner": false, "player": true }
 ]

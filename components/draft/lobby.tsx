@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/client";
-import type { League, Profile } from "@/lib/league";
+import type { League, Member as Profile } from "@/lib/league";
 import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 import { OWNER_BG } from "@/lib/colors";
 import type { Couple } from "@/lib/types";
@@ -69,9 +69,10 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
   const s = ms != null ? Math.floor((ms % 6e4) / 1e3) : 0;
   const pad = (n: number) => (ms == null ? "––" : String(n).padStart(2, "0"));
 
-  const humans = members.filter((x) => !x.is_mock);
+  const players = members.filter((x) => x.is_player);
+  const humans = players.filter((x) => !x.is_mock);
   const hereCount = humans.filter((x) => online.has(x.id)).length;
-  const canOpen = members.length >= 2 && couples.filter((c) => c.status === "active").length >= members.length * league.roster_size;
+  const canOpen = players.length >= 2 && couples.filter((c) => c.status === "active").length >= players.length * league.roster_size;
   const withPhotos = couples.filter((c) => c.image_url);
   const laneA = withPhotos.filter((_, i) => i % 2 === 0);
   const laneB = withPhotos.filter((_, i) => i % 2 === 1);
@@ -146,9 +147,9 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
         </div>
 
         <div className="mt-7 flex flex-wrap justify-center gap-2.5">
-          {members.map((p) => {
+          {players.map((p) => {
             const here = online.has(p.id) || p.is_mock;
-            const slot = Math.max(0, members.indexOf(p)) % OWNER_BG.length;
+            const slot = Math.max(0, players.indexOf(p)) % OWNER_BG.length;
             return (
               <span key={p.id} className={`flex items-center gap-2 rounded-full border hairline bg-plum-900/80 py-1.5 pl-1.5 pr-3 text-[13px] ${here ? "" : "opacity-60"}`}>
                 <i className={`inline-grid h-[26px] w-[26px] place-items-center rounded-full text-xs font-bold not-italic text-white ${OWNER_BG[slot]}`}>
@@ -159,12 +160,22 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
               </span>
             );
           })}
+          {members
+            .filter((m) => !m.is_player)
+            .map((m) => (
+              <span key={m.id} className="flex items-center gap-2 rounded-full border border-gold-400/30 bg-plum-950/70 py-1.5 pl-1.5 pr-3 text-[13px] text-silver-300">
+                <i className="inline-grid h-[26px] w-[26px] place-items-center rounded-full bg-gold-500 text-xs font-bold not-italic text-plum-950">{m.display_name.slice(0, 1)}</i>
+                {m.display_name}
+                <span className="text-[10px] uppercase tracking-wide text-gold-300">commissioner</span>
+                <span className={`h-[7px] w-[7px] rounded-full ${online.has(m.id) ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-silver-500"}`} />
+              </span>
+            ))}
         </div>
 
         {isCommissioner ? (
           <div className="mt-7">
             <p className="text-sm text-silver-500">
-              {hereCount} of {humans.length} {humans.length === 1 ? "member is" : "members are"} here. Opening randomizes the order and starts the first{" "}
+              {hereCount} of {humans.length} {humans.length === 1 ? "drafter is" : "drafters are"} here. Opening randomizes the order and starts the first{" "}
               {league.pick_seconds}-second clock.
             </p>
             <button onClick={open} disabled={pending || !canOpen} className="btn-gold mt-4 flex-col gap-0 px-7 py-3.5 text-base">
@@ -173,7 +184,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
             </button>
             {!canOpen && (
               <p className="mt-2 text-xs text-gold-300">
-                {members.length < 2 ? "Need at least 2 members signed in." : "Not enough active couples for this roster size."}
+                {players.length < 2 ? "Need at least 2 drafting members signed in." : "Not enough active couples for this roster size."}
               </p>
             )}
             {err && <p className="mt-2 text-xs text-rose-300">{err}</p>}

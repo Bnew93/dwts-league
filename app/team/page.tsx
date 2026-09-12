@@ -31,6 +31,20 @@ export default async function TeamPage() {
   const myClaims = claims.filter((c) => c.user_id === me && c.status !== "fulfilled");
   const leftovers = couples.filter((c) => c.status === "active" && !owners.has(c.id));
 
+  if (!ctx.isPlayer) {
+    return (
+      <Shell ctx={ctx}>
+        <PageTitle eyebrow={ctx.profile.display_name} title="My Team" />
+        <div className="glass fade-up mt-5 p-6 text-center text-silver-300">
+          You run the league but aren&apos;t drafting a team this season.{" "}
+          <Link href="/standings" className="text-gold-300 underline decoration-gold-400/50">
+            See the standings
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
+
   return (
     <Shell ctx={ctx}>
       <PageTitle

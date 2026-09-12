@@ -21,11 +21,11 @@ export async function Shell({
   /** lock the page to the viewport; children manage their own scrolling */
   fill?: boolean;
 }) {
-  const { league, profile, isCommissioner } = ctx;
+  const { league, profile, isCommissioner, isPlayer } = ctx;
   const items: NavItem[] = [];
   if (league.draft_status !== "complete") items.push({ href: "/draft", label: "Draft", icon: "draft" });
   items.push({ href: "/standings", label: "Standings", icon: "standings" });
-  items.push({ href: "/team", label: "My Team", icon: "team" });
+  if (isPlayer) items.push({ href: "/team", label: "My Team", icon: "team" });
   items.push({ href: "/bracket", label: "Bracket", icon: "bracket" });
   if (isCommissioner) items.push({ href: "/admin", label: "Admin", icon: "admin" });
 

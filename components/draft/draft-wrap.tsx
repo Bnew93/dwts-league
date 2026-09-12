@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mirrorball } from "@/components/mirrorball";
 import { CoupleFace } from "@/components/couple";
 import { OWNER_BG, OWNER_TEXT } from "@/lib/colors";
-import type { Profile } from "@/lib/league";
+import type { Member as Profile } from "@/lib/league";
 import type { Couple, DraftPick } from "@/lib/types";
 
 /**

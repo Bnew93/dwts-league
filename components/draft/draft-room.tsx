@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransit
 import { Search, Timer, Check, X, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { buildBoard, pickOwner, roundOf, secondsLeft, leftoverCount } from "@/lib/draft";
-import type { League, Profile } from "@/lib/league";
+import type { League, Member as Profile } from "@/lib/league";
 import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 import { OWNER_BG, OWNER_BORDER } from "@/lib/colors";
 import type { Couple, DraftPick } from "@/lib/types";

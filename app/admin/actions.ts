@@ -50,17 +50,34 @@ export async function saveSchedule(formData: FormData): Promise<void> {
 const emailSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   display_name: z.string().trim().max(40).optional().transform((v) => v || null),
+  is_player: z.union([z.literal("on"), z.undefined()]).transform((v) => v === "on"),
 });
 
 export async function addAllowedEmail(formData: FormData): Promise<void> {
   const ctx = await requireCommissioner();
-  const { email, display_name } = emailSchema.parse(Object.fromEntries(formData));
+  const { email, display_name, is_player } = emailSchema.parse(Object.fromEntries(formData));
   const supabase = await createClient();
   const { error } = await supabase
     .from("allowed_emails")
-    .upsert({ email, display_name, league_id: ctx.league.id, is_commissioner: false }, { onConflict: "email" });
+    .upsert({ email, display_name, league_id: ctx.league.id, is_commissioner: false, is_player }, { onConflict: "email" });
   if (error) throw new Error(error.message);
   revalidatePath("/admin");
+}
+
+/** Toggle whether a member drafts a team. Only while the draft is pending. */
+export async function setPlayer(formData: FormData): Promise<void> {
+  const ctx = await requireCommissioner();
+  if (ctx.league.draft_status !== "pending") throw new Error("locked once the draft starts");
+  const email = z.string().email().parse(formData.get("email"));
+  const is_player = formData.get("is_player") === "true";
+  const supabase = await createClient();
+  const { data: row, error } = await supabase.from("allowed_emails").update({ is_player }).eq("email", email).select("user_id").single();
+  if (error) throw new Error(error.message);
+  if (row?.user_id) {
+    const { error: e2 } = await supabase.from("league_members").update({ is_player }).eq("user_id", row.user_id).eq("league_id", ctx.league.id);
+    if (e2) throw new Error(e2.message);
+  }
+  revalidatePath("/", "layout");
 }
 
 export async function removeAllowedEmail(formData: FormData): Promise<void> {

@@ -12,7 +12,7 @@ import { createClient } from "@supabase/supabase-js";
 const LEAGUE_NAME = "Drafting on the Dance Floor";
 const SEASON = 35;
 
-type Member = { email: string; display_name: string; commissioner: boolean };
+type Member = { email: string; display_name: string | null; commissioner: boolean; player?: boolean };
 
 function load(): Member[] {
   const members = JSON.parse(readFileSync("seed/members.json", "utf8")) as Member[];
@@ -21,12 +21,13 @@ function load(): Member[] {
 }
 
 function toSql(members: Member[]) {
+  const q = (s: string | null) => (s == null ? "null" : `'${s.replace(/'/g, "''")}'`);
   const vals = members
-    .map((m) => `(lower('${m.email}'), (select id from public.leagues where season = ${SEASON} limit 1), '${m.display_name.replace(/'/g, "''")}', ${m.commissioner})`)
+    .map((m) => `(lower('${m.email}'), (select id from public.leagues where season = ${SEASON} limit 1), ${q(m.display_name)}, ${m.commissioner}, ${m.player ?? true})`)
     .join(",\n  ");
   return [
     `insert into public.leagues (name, season) select '${LEAGUE_NAME}', ${SEASON} where not exists (select 1 from public.leagues where season = ${SEASON});`,
-    `insert into public.allowed_emails (email, league_id, display_name, is_commissioner) values\n  ${vals}\non conflict (email) do update set display_name = excluded.display_name, is_commissioner = excluded.is_commissioner, league_id = excluded.league_id;`,
+    `insert into public.allowed_emails (email, league_id, display_name, is_commissioner, is_player) values\n  ${vals}\non conflict (email) do update set display_name = excluded.display_name, is_commissioner = excluded.is_commissioner, is_player = excluded.is_player, league_id = excluded.league_id;`,
     // attach anyone who already has an auth account
     `insert into public.league_members (league_id, user_id)
 select a.league_id, u.id from public.allowed_emails a join auth.users u on lower(u.email) = a.email
@@ -59,6 +60,7 @@ async function main() {
       league_id: league!.id,
       display_name: m.display_name,
       is_commissioner: m.commissioner,
+      is_player: m.player ?? true,
     })),
   );
   if (up.error) throw up.error;
