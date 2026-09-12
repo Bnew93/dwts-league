@@ -76,7 +76,7 @@ export function CoupleMarquee({
       {out && <span className="pointer-events-none absolute inset-0 z-10 grid place-items-center text-6xl font-light text-silver-100/50">✕</span>}
     </>
   );
-  const cls = `group relative block aspect-[3/4] overflow-hidden rounded-2xl border hairline bg-plum-800 text-left transition-[transform,box-shadow,border-color] duration-300 ${
+  const cls = `group relative block w-full aspect-[3/4] overflow-hidden rounded-2xl border hairline bg-plum-800 text-left transition-[transform,box-shadow,border-color] duration-300 ${
     disabled ? "cursor-default" : "hover:-translate-y-1 hover:border-gold-400/60 hover:shadow-glow-sm"
   } ${className}`;
   if (onClick) {
