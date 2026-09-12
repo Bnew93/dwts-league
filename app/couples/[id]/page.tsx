@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { getCtx } from "@/lib/league";
-import { Shell } from "@/components/shell";
+import { Shell, SectionTitle } from "@/components/shell";
 import { StatusChip, placementLabel } from "@/components/status-chip";
+import { CoupleAvatar } from "@/components/couple-avatar";
 import { loadSeason, ownershipHistory, weekInfo } from "@/lib/queries";
 import { OWNER_BG, ownerIndex } from "@/lib/colors";
 import { ScoreChart } from "@/components/score-chart";
@@ -27,72 +29,72 @@ export default async function CouplePage({ params }: { params: Promise<{ id: str
     .sort((a, b) => a.week - b.week);
   const lastAired = aired.size ? Math.max(...aired) : 0;
   const chartWeeks = weeks.filter((w) => w <= Math.max(lastAired, couple.elimination_week ?? 0, myScores.at(-1)?.week ?? 0));
+  const out = couple.status === "eliminated" || couple.status === "withdrew";
 
   return (
     <Shell ctx={ctx}>
-      <Link href="/bracket" className="text-xs text-zinc-500 hover:text-zinc-300">
-        ← Bracket
+      <Link href="/bracket" className="inline-flex items-center gap-1 text-xs text-silver-500 transition-colors hover:text-gold-300">
+        <ArrowLeft size={14} /> Bracket
       </Link>
-      <div className="mt-2 flex items-start gap-4">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-2xl">{couple.celebrity.slice(0, 1)}</div>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold leading-tight">{couple.celebrity}</h1>
-          <div className="text-zinc-300">with {couple.professional}</div>
-          <div className="text-sm text-zinc-500">{couple.notability}</div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <StatusChip couple={couple} />
-            <span className="text-xs text-zinc-500">cast #{couple.cast_order}</span>
+
+      <div className="glass fade-up relative mt-3 overflow-hidden p-5">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_70%_at_20%_0%,rgb(233_194_80/0.22),transparent_70%)]" />
+        <div className="relative flex items-start gap-4">
+          <CoupleAvatar couple={couple} size="xl" dim={out} />
+          <div className="min-w-0 flex-1">
+            <div className="eyebrow">Cast #{couple.cast_order}</div>
+            <h1 className="display mt-0.5 text-3xl font-semibold leading-tight text-silver-100">{couple.celebrity}</h1>
+            <div className="text-silver-300">with {couple.professional}</div>
+            <div className="mt-1 text-sm text-silver-500">{couple.notability}</div>
+            <div className="mt-3">
+              <StatusChip couple={couple} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Status */}
-      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Season</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+      <section className="glass fade-up mt-4 p-4" style={{ animationDelay: "60ms" }}>
+        <SectionTitle>Season</SectionTitle>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
           <div>
-            <dt className="text-xs text-zinc-500">Status</dt>
-            <dd className="capitalize">{couple.status}</dd>
+            <dt className="text-xs text-silver-500">Status</dt>
+            <dd className="capitalize text-silver-100">{couple.status}</dd>
           </div>
           <div>
-            <dt className="text-xs text-zinc-500">Eliminated</dt>
-            <dd>{couple.elimination_week != null ? `Week ${couple.elimination_week}` : "—"}</dd>
+            <dt className="text-xs text-silver-500">Eliminated</dt>
+            <dd className="text-silver-100">{couple.elimination_week != null ? `Week ${couple.elimination_week}` : "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-zinc-500">Placement</dt>
-            <dd>{placementLabel(couple.placement) ?? "—"}</dd>
+            <dt className="text-xs text-silver-500">Placement</dt>
+            <dd className="text-silver-100">{placementLabel(couple.placement) ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-zinc-500">Judges&apos; total</dt>
-            <dd>{myScores.length ? myScores.reduce((a, s) => a + s.total, 0) : "—"}</dd>
+            <dt className="text-xs text-silver-500">Judges&apos; total</dt>
+            <dd className="text-silver-100">{myScores.length ? myScores.reduce((a, s) => a + s.total, 0) : "—"}</dd>
           </div>
         </dl>
       </section>
 
-      {/* Scores */}
-      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Weekly judges&apos; scores</h2>
+      <section className="glass fade-up mt-4 p-4" style={{ animationDelay: "120ms" }}>
+        <SectionTitle>Weekly judges&apos; scores</SectionTitle>
         {myScores.length ? (
           <ScoreChart weeks={chartWeeks.length ? chartWeeks : weeks} scores={myScores} />
         ) : (
-          <p className="mt-3 text-sm text-zinc-500">No scores yet. They appear after each Tuesday&apos;s show.</p>
+          <p className="text-sm text-silver-500">No scores yet. They appear after each Tuesday&apos;s show.</p>
         )}
       </section>
 
-      {/* Owner history */}
-      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Ownership</h2>
+      <section className="glass fade-up mt-4 p-4" style={{ animationDelay: "180ms" }}>
+        <SectionTitle>Ownership</SectionTitle>
         {history.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">
-            {league.draft_status === "complete" ? "Undrafted · Leftovers pool" : "Not drafted yet"}
-          </p>
+          <p className="text-sm text-silver-500">{league.draft_status === "complete" ? "Undrafted · Leftovers pool" : "Not drafted yet"}</p>
         ) : (
-          <ul className="mt-2 space-y-2 text-sm">
+          <ul className="space-y-2 text-sm">
             {history.map((h, i) => (
               <li key={i} className="flex items-center gap-2">
                 <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorOf(h.user_id)}`} />
-                <span className="font-medium">{nameOf(h.user_id)}</span>
-                <span className="text-zinc-500">
+                <span className="font-medium text-silver-100">{nameOf(h.user_id)}</span>
+                <span className="text-silver-500">
                   {h.source === "draft" ? "drafted" : "replacement pick"} · from week {h.joined_week}
                   {h.left_week != null && ` to week ${h.left_week} (${h.left_event})`}
                 </span>

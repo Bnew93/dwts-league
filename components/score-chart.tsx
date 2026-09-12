@@ -26,8 +26,8 @@ export function ScoreChart({ weeks, scores }: { weeks: number[]; scores: { week:
       <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Weekly judges' scores">
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={padL} x2={W - 8} y1={y(t)} y2={y(t)} stroke="#27272a" strokeWidth="1" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize="10" fill="#71717a">
+            <line x1={padL} x2={W - 8} y1={y(t)} y2={y(t)} stroke="#3a2a55" strokeWidth="1" />
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize="10" fill="#a7a4b3">
               {t}
             </text>
           </g>
@@ -48,13 +48,13 @@ export function ScoreChart({ weeks, scores }: { weeks: number[]; scores: { week:
                     <title>{`Week ${w}: ${v}`}</title>
                   </path>
                   {isLabel && (
-                    <text x={cx} y={y(v) - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="#e4e4e7">
+                    <text x={cx} y={y(v) - 4} textAnchor="middle" fontSize="11" fontWeight="600" fill="#f3f2f7">
                       {v}
                     </text>
                   )}
                 </>
               )}
-              <text x={cx} y={H - 6} textAnchor="middle" fontSize="10" fill={v != null ? "#a1a1aa" : "#52525b"}>
+              <text x={cx} y={H - 6} textAnchor="middle" fontSize="10" fill={v != null ? "#d8d6e0" : "#6b6880"}>
                 {w}
               </text>
             </g>

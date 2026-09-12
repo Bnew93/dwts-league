@@ -1,10 +1,8 @@
 export function ComingSoon({ title, phase }: { title: string; phase: number }) {
   return (
     <>
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <p className="mt-6 rounded-xl border border-dashed border-zinc-800 p-6 text-center text-zinc-500">
-        Arrives in Phase {phase}.
-      </p>
+      <h1 className="display text-3xl font-semibold">{title}</h1>
+      <p className="glass mt-6 border-dashed p-8 text-center text-silver-500">Arrives in Phase {phase}.</p>
     </>
   );
 }

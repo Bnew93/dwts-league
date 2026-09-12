@@ -22,7 +22,7 @@ export function GoogleButton() {
     <button
       onClick={signIn}
       disabled={busy}
-      className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-5 py-3 text-base font-medium text-zinc-900 shadow hover:bg-zinc-100 disabled:opacity-60"
+      className="flex w-full items-center justify-center gap-3 rounded-lg bg-white px-5 py-3 text-base font-medium text-zinc-900 shadow-[0_8px_30px_-10px_rgb(255_255_255/0.5)] transition hover:-translate-y-0.5 hover:bg-zinc-50 active:translate-y-0 disabled:opacity-60"
     >
       <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden>
         <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z" />

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { getCtx } from "@/lib/league";
-import { Shell } from "@/components/shell";
+import { Shell, PageTitle, SectionTitle } from "@/components/shell";
+import { CoupleCard } from "@/components/couple-card";
 import { StatusChip } from "@/components/status-chip";
 import { loadSeason, currentOwners, weekInfo, scoreTotals } from "@/lib/queries";
 
@@ -29,51 +31,52 @@ export default async function TeamPage() {
 
   return (
     <Shell ctx={ctx}>
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">My Team</h1>
-        {myRow && (
-          <span className="text-sm text-zinc-400">
-            #{myRow.podium_rank} · {myRow.survival_points} pts
+      <PageTitle
+        eyebrow={ctx.profile.display_name}
+        title="My Team"
+        meta={myRow && (
+          <span>
+            <span className="display text-2xl text-silver-100">#{myRow.podium_rank}</span> · {myRow.survival_points} pts
           </span>
         )}
-      </div>
+      />
 
       {league.draft_status !== "complete" && (
-        <p className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
+        <div className="glass fade-up mt-5 p-5 text-center text-sm text-silver-300">
           Your team fills in as the draft happens.{" "}
-          <Link href="/draft" className="text-mirror underline">
+          <Link href="/draft" className="text-gold-300 underline decoration-gold-400/50">
             Draft room
           </Link>
-        </p>
+        </div>
       )}
 
-      {/* Replacement claim card (fulfilment wired in Phase 4) */}
       {myClaims.map((claim) => {
         const lost = couples.find((c) => c.id === claim.lost_couple_id);
         const isHead = head?.id === claim.id;
         return (
-          <div key={claim.id} className="mt-4 rounded-xl border border-amber-600/50 bg-amber-950/30 p-4">
-            <div className="text-xs uppercase tracking-wide text-amber-300">Replacement pick</div>
-            <div className="mt-1 text-sm text-zinc-200">
+          <div key={claim.id} className="glass fade-up mt-5 border-gold-400/40 p-4">
+            <div className="eyebrow flex items-center gap-1.5">
+              <Clock size={12} /> Replacement pick
+            </div>
+            <div className="mt-1.5 text-sm text-silver-100">
               You lost {lost?.celebrity} &amp; {lost?.professional}
               {lost?.elimination_week != null && ` in week ${lost.elimination_week}`}.
             </div>
-            {claim.status === "void" && <p className="mt-2 text-sm text-zinc-400">No leftovers remain, so this slot stays empty.</p>}
+            {claim.status === "void" && <p className="mt-2 text-sm text-silver-500">No leftovers remain, so this slot stays empty.</p>}
             {claim.status === "expired" && (
-              <p className="mt-2 text-sm text-zinc-400">
-                Deadline passed. Auto-picked {couples.find((c) => c.id === claim.picked_couple_id)?.celebrity}.
-              </p>
+              <p className="mt-2 text-sm text-silver-500">Deadline passed. Auto-picked {couples.find((c) => c.id === claim.picked_couple_id)?.celebrity}.</p>
             )}
-            {claim.status === "pending" && !isHead && head && (
-              <p className="mt-2 text-sm text-zinc-400">Waiting on {nameOf(head.user_id)} to pick first.</p>
-            )}
+            {claim.status === "pending" && !isHead && head && <p className="mt-2 text-sm text-silver-500">Waiting on {nameOf(head.user_id)} to pick first.</p>}
             {claim.status === "pending" && isHead && (
               <div className="mt-2 text-sm">
-                <p className="text-zinc-300">
+                <p className="text-silver-300">
                   Pick from {leftovers.length} leftover{leftovers.length === 1 ? "" : "s"}
-                  {claim.deadline && <> by {new Date(claim.deadline).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" })} ET</>}.
+                  {claim.deadline && (
+                    <> by {new Date(claim.deadline).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" })} ET</>
+                  )}
+                  .
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">The pick button arrives in Phase 4.</p>
+                <p className="mt-1 text-xs text-silver-500">The pick button arrives in Phase 4.</p>
               </div>
             )}
           </div>
@@ -81,52 +84,41 @@ export default async function TeamPage() {
       })}
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Active · {active.length}</h2>
-        <ul className="mt-2 space-y-2">
+        <SectionTitle right={`${active.length} of ${league.roster_size}`}>Still dancing</SectionTitle>
+        <ul className="stagger space-y-2">
           {active.map((c) => (
             <li key={c.id}>
-              <Link href={`/couples/${c.id}`} className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 hover:border-zinc-600">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-lg">{c.celebrity.slice(0, 1)}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{c.celebrity}</div>
-                  <div className="truncate text-xs text-zinc-400">with {c.professional}</div>
-                </div>
-                <div className="text-right">
-                  <StatusChip couple={c} />
-                  {totals.get(c.id) != null && totals.get(c.id)! > 0 && (
-                    <div className="mt-1 text-xs text-zinc-500">{totals.get(c.id)} judges&apos; pts</div>
-                  )}
-                </div>
-              </Link>
+              <CoupleCard
+                couple={c}
+                right={
+                  <>
+                    <StatusChip couple={c} />
+                    {(totals.get(c.id) ?? 0) > 0 && <span className="text-xs text-silver-500">{totals.get(c.id)} judges&apos; pts</span>}
+                  </>
+                }
+              />
             </li>
           ))}
           {active.length === 0 && league.draft_status === "complete" && (
-            <li className="rounded-lg border border-dashed border-zinc-800 p-4 text-center text-sm text-zinc-500">No active couples left.</li>
+            <li className="rounded-2xl border border-dashed hairline p-6 text-center text-sm text-silver-500">No couples left dancing.</li>
           )}
         </ul>
       </section>
 
       {out.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Eliminated · {out.length}</h2>
-          <ul className="mt-2 space-y-2">
+        <section className="mt-7">
+          <SectionTitle right={`${out.length}`}>Eliminated</SectionTitle>
+          <ul className="stagger space-y-2">
             {out.map((c) => (
               <li key={c.id}>
-                <Link href={`/couples/${c.id}`} className="flex items-center gap-3 rounded-lg border border-zinc-800/60 bg-zinc-900/30 p-3 text-zinc-400 hover:border-zinc-700">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800/60 text-lg opacity-60">{c.celebrity.slice(0, 1)}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium line-through decoration-zinc-600">{c.celebrity}</div>
-                    <div className="truncate text-xs">with {c.professional}</div>
-                  </div>
-                  <StatusChip couple={c} />
-                </Link>
+                <CoupleCard couple={c} dim compact />
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <p className="mt-6 text-center text-xs text-zinc-500">Next: week {current}.</p>
+      <p className="mt-8 text-center text-xs text-silver-500">Next show: week {current}.</p>
     </Shell>
   );
 }

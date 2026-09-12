@@ -11,6 +11,8 @@ export type Couple = {
   elimination_week: number | null;
   elimination_date: string | null;
   placement: number | null;
+  celebrity_image_url: string | null;
+  pro_image_url: string | null;
 };
 
 export type DraftPick = {

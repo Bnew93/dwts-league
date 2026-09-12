@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getCtx } from "@/lib/league";
-import { Shell } from "@/components/shell";
+import { Shell, PageTitle } from "@/components/shell";
+import { CoupleAvatar } from "@/components/couple-avatar";
 import { loadSeason, ownershipHistory, currentOwners, weekInfo } from "@/lib/queries";
 import { OWNER_BG, OWNER_TEXT, ownerIndex } from "@/lib/colors";
+import type { Couple } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,6 @@ export default async function BracketPage() {
   const nameOf = (id: string) => members.find((m) => m.id === id)?.display_name ?? "—";
   const idx = (id: string | null | undefined) => (id ? ownerIndex(league.draft_order, id, members) % OWNER_BG.length : -1);
 
-  // Row order: by owner in draft order, then leftovers. Within owner: alive first, then by elimination week desc.
   const order = league.draft_order ?? members.map((m) => m.id);
   const groups = [
     ...order.map((uid) => ({
@@ -28,43 +29,36 @@ export default async function BracketPage() {
     { uid: null as string | null, rows: couples.filter((c) => ownershipHistory(events, c.id).length === 0) },
   ].filter((g) => g.rows.length);
 
-  const sortRows = <T extends { elimination_week: number | null; placement: number | null; cast_order: number }>(rows: T[]) =>
+  const sortRows = (rows: Couple[]) =>
     [...rows].sort(
-      (a, b) =>
-        (a.placement ?? 999) - (b.placement ?? 999) ||
-        (b.elimination_week ?? 999) - (a.elimination_week ?? 999) ||
-        a.cast_order - b.cast_order,
+      (a, b) => (a.placement ?? 999) - (b.placement ?? 999) || (b.elimination_week ?? 999) - (a.elimination_week ?? 999) || a.cast_order - b.cast_order,
     );
-
-  // owner of a couple during week w (replacement couples change lanes)
   const ownerAt = (coupleId: string, w: number) => {
     const hist = ownershipHistory(events, coupleId);
     const h = hist.find((h) => w >= h.joined_week && (h.left_week === null || w < h.left_week));
     return h?.user_id ?? null;
   };
+  const finale = weeks[weeks.length - 1];
 
   return (
-    <Shell ctx={ctx}>
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">Bracket</h1>
-        <span className="text-sm text-zinc-400">{aired.size ? `${aired.size} of ${weeks.length} weeks aired` : "pre-season"}</span>
-      </div>
+    <Shell ctx={ctx} wide>
+      <PageTitle eyebrow="Season progression" title="Bracket" meta={aired.size ? `${aired.size} of ${weeks.length} weeks aired` : "Pre-season"} />
+      {league.draft_status !== "complete" && <p className="mt-3 text-sm text-silver-500">Lanes take their owner colors once the draft is complete.</p>}
 
-      {league.draft_status !== "complete" && (
-        <p className="mt-3 text-sm text-zinc-400">Lanes get their owner colors once the draft is complete.</p>
-      )}
-
-      <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
-        <table className="border-separate border-spacing-y-1 text-xs" style={{ minWidth: 220 + weeks.length * 40 }}>
+      <div className="glass fade-up -mx-4 mt-5 overflow-x-auto px-2 py-3 sm:mx-0 sm:px-3" style={{ animationDelay: "80ms" }}>
+        <table className="border-separate border-spacing-y-1 text-xs" style={{ minWidth: 260 + weeks.length * 42 }}>
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-zinc-950 pr-3 text-left font-medium text-zinc-500">Couple</th>
+              <th className="sticky left-0 z-10 bg-plum-900/95 pl-2 pr-3 text-left font-medium text-silver-500 backdrop-blur">Couple</th>
               {weeks.map((w) => (
                 <th
                   key={w}
-                  className={`w-10 text-center font-medium ${w === current && !aired.has(w) ? "text-mirror" : aired.has(w) ? "text-zinc-300" : "text-zinc-600"}`}
+                  className={`w-10 text-center font-semibold ${
+                    w === current && !aired.has(w) ? "text-gold-300" : aired.has(w) ? "text-silver-300" : "text-silver-500/60"
+                  }`}
                 >
-                  {w === weeks[weeks.length - 1] ? "F" : w}
+                  {w === current && !aired.has(w) && <span className="mx-auto mb-0.5 block h-1 w-1 rounded-full bg-gold-400 shadow-[0_0_8px_rgb(233_194_80)]" />}
+                  {w === finale ? "F" : w}
                 </th>
               ))}
             </tr>
@@ -74,14 +68,10 @@ export default async function BracketPage() {
               <GroupRows
                 key={g.uid ?? "leftovers"}
                 label={g.uid ? nameOf(g.uid) : "Leftovers"}
-                color={g.uid ? OWNER_TEXT[idx(g.uid)] : "text-zinc-500"}
+                color={g.uid ? OWNER_TEXT[idx(g.uid)] : "text-silver-500"}
                 rows={sortRows(g.rows).map((c) => ({
-                  id: c.id,
-                  name: c.celebrity,
-                  pro: c.professional,
+                  couple: c,
                   alive: c.status === "active" || c.status === "finalist",
-                  elimWeek: c.elimination_week,
-                  placement: c.placement,
                   cells: weeks.map((w) => {
                     const ended = c.elimination_week != null && w > c.elimination_week;
                     const dies = c.elimination_week === w && (c.status === "eliminated" || c.status === "withdrew");
@@ -89,8 +79,8 @@ export default async function BracketPage() {
                     return {
                       w,
                       state: ended ? "gone" : dies ? "out" : aired.has(w) ? "alive" : "future",
-                      color: o ? OWNER_BG[idx(o)] : owners.has(c.id) ? OWNER_BG[idx(owners.get(c.id))] : "bg-zinc-600",
-                      trophy: c.placement === 1 && w === weeks[weeks.length - 1],
+                      color: o ? OWNER_BG[idx(o)] : owners.has(c.id) ? OWNER_BG[idx(owners.get(c.id))] : "bg-silver-500/60",
+                      trophy: c.placement === 1 && w === finale,
                     } as const;
                   }),
                 }))}
@@ -100,14 +90,14 @@ export default async function BracketPage() {
         </table>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3 text-xs text-zinc-400">
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-silver-500">
         {order.map((uid) => (
-          <span key={uid} className="flex items-center gap-1">
+          <span key={uid} className="flex items-center gap-1.5">
             <span className={`inline-block h-2.5 w-2.5 rounded-full ${OWNER_BG[idx(uid)]}`} /> {nameOf(uid)}
           </span>
         ))}
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-zinc-600" /> Leftovers
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-silver-500/60" /> Leftovers
         </span>
         <span>✕ eliminated · F finale</span>
       </div>
@@ -116,34 +106,37 @@ export default async function BracketPage() {
 }
 
 type Cell = { w: number; state: "alive" | "out" | "gone" | "future"; color: string; trophy: boolean };
-type Row = { id: string; name: string; pro: string; alive: boolean; elimWeek: number | null; placement: number | null; cells: Cell[] };
+type Row = { couple: Couple; alive: boolean; cells: Cell[] };
 
 function GroupRows({ label, color, rows }: { label: string; color: string; rows: Row[] }) {
   return (
     <>
       <tr>
-        <td colSpan={99} className={`sticky left-0 pt-3 text-[11px] font-semibold uppercase tracking-wide ${color}`}>
+        <td colSpan={99} className={`sticky left-0 pl-2 pt-3 text-[11px] font-semibold uppercase tracking-[0.16em] ${color}`}>
           {label}
         </td>
       </tr>
       {rows.map((r) => (
-        <tr key={r.id}>
-          <td className="sticky left-0 z-10 bg-zinc-950 pr-3">
-            <Link href={`/couples/${r.id}`} className={`block max-w-[200px] truncate hover:underline ${r.alive ? "text-zinc-100" : "text-zinc-500"}`}>
-              {r.name}
-              <span className="text-zinc-600"> · {r.pro.split(" ")[0]}</span>
+        <tr key={r.couple.id} className="group">
+          <td className="sticky left-0 z-10 bg-plum-900/95 pl-2 pr-3 backdrop-blur">
+            <Link href={`/couples/${r.couple.id}`} className="flex max-w-[230px] items-center gap-2 py-0.5 hover:underline">
+              <CoupleAvatar couple={r.couple} size="sm" dim={!r.alive} />
+              <span className={`truncate ${r.alive ? "text-silver-100" : "text-silver-500"}`}>
+                {r.couple.celebrity}
+                <span className="text-silver-500/70"> · {r.couple.professional.split(" ")[0]}</span>
+              </span>
             </Link>
           </td>
           {r.cells.map((cell) => (
             <td key={cell.w} className="p-0">
               <div
-                className={`mx-auto flex h-6 w-9 items-center justify-center rounded-sm text-[11px] font-bold ${
+                className={`mx-auto flex h-7 w-9 items-center justify-center rounded-[5px] text-[11px] font-bold transition-transform group-hover:scale-[1.04] ${
                   cell.state === "alive"
-                    ? `${cell.color} text-white`
+                    ? `${cell.color} text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]`
                     : cell.state === "out"
-                      ? "bg-zinc-800 text-zinc-300"
+                      ? "bg-plum-950/80 text-silver-300 ring-1 ring-inset ring-silver-500/30"
                       : cell.state === "future"
-                        ? `${cell.color} opacity-25`
+                        ? `${cell.color} opacity-20`
                         : ""
                 }`}
                 title={`Week ${cell.w}`}

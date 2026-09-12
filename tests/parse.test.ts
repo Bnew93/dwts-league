@@ -26,6 +26,16 @@ test("S35 pre-season: 16 couples, all active, in reveal order", () => {
   // rowspan "Participating" carried down to every row
   assert.ok(couples.every((c) => c.statusText === "Participating"), "status carried by rowspan");
   assert.equal(couples.find((c) => c.celebrity === "Harry Shum Jr.")?.celebrityKey, "harry-shum-jr");
+  // wiki titles for image lookup
+  assert.equal(couples[0].celebrityWiki, "Tatyana Ali");
+  assert.equal(couples[0].professionalWiki, "Jan Ravnik");
+  assert.equal(couples.find((c) => c.celebrity === "Tyler Cameron")?.celebrityWiki, "Tyler Cameron");
+  assert.equal(couples.find((c) => c.celebrity === "Guillermo Rodriguez")?.celebrityWiki, "Guillermo Rodriguez (comedian)");
+  assert.equal(couples.find((c) => c.celebrity === "Jenna Dewan")?.professionalWiki, "Valentin Chmerkovskiy");
+  // no article of their own → the cell links to their show; we must not take that
+  assert.equal(couples.find((c) => c.celebrity === "Conner Leavitt")?.celebrityWiki, null);
+  assert.equal(couples.find((c) => c.celebrity === "Sarah Jane Nader")?.celebrityWiki, null);
+  assert.ok(couples.every((c) => c.professionalWiki), "every pro has an article");
   assert.ok(!warnings.includes("cast table not found"));
 });
 

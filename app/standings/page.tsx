@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { ChevronDown, Crown } from "lucide-react";
 import { getCtx } from "@/lib/league";
-import { Shell } from "@/components/shell";
-import { StatusChip } from "@/components/status-chip";
+import { Shell, PageTitle } from "@/components/shell";
+import { CoupleCard } from "@/components/couple-card";
+import { CoupleAvatar } from "@/components/couple-avatar";
 import { loadSeason, currentOwners, weekInfo, scoreTotals } from "@/lib/queries";
 import { OWNER_BG, ownerIndex } from "@/lib/colors";
 import type { Couple } from "@/lib/types";
@@ -20,7 +22,6 @@ export default async function StandingsPage() {
   const nameOf = (id: string) => members.find((m) => m.id === id)?.display_name ?? "—";
   const colorOf = (id: string) => OWNER_BG[ownerIndex(league.draft_order, id, members) % OWNER_BG.length];
 
-  // couples ever on each user's roster (current + eliminated while owned)
   const rosterOf = (userId: string) => {
     const ids = new Set<string>();
     for (const e of events) if (e.user_id === userId && (e.event === "drafted" || e.event === "replacement")) ids.add(e.couple_id);
@@ -34,79 +35,85 @@ export default async function StandingsPage() {
 
   return (
     <Shell ctx={ctx}>
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-bold">Standings</h1>
-        <span className="text-sm text-zinc-400">
-          Season {league.season} · {aired.size ? `through week ${Math.max(...aired)}` : "pre-season"}
-        </span>
-      </div>
+      <PageTitle eyebrow={`Season ${league.season}`} title="Standings" meta={aired.size ? `Through week ${Math.max(...aired)}` : "Pre-season"} />
 
       {champion && championOwner && (
-        <div className="mt-4 rounded-xl border border-mirror/50 bg-gradient-to-br from-mirror/25 to-zinc-900 p-5 text-center">
-          <div className="text-4xl">🏆</div>
-          <div className="mt-1 text-xs uppercase tracking-widest text-mirror">Grand Champion</div>
-          <div className="mt-1 text-2xl font-bold">{nameOf(championOwner)}</div>
-          <div className="text-sm text-zinc-300">
-            {champion.celebrity} &amp; {champion.professional} won the Mirrorball
+        <div className="glass fade-up relative mt-5 overflow-hidden p-6 text-center" style={{ animationDelay: "80ms" }}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(233_194_80/0.28),transparent_70%)]" />
+          <Crown className="mx-auto text-gold-300 drop-shadow-[0_0_18px_rgb(233_194_80/0.8)]" size={40} />
+          <div className="eyebrow mt-2">Grand Champion</div>
+          <div className="display mt-1 text-3xl font-semibold">
+            <span className="gold-text">{nameOf(championOwner)}</span>
+          </div>
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <CoupleAvatar couple={champion} size="md" />
+            <div className="text-left text-sm text-silver-300">
+              <div className="font-medium text-silver-100">{champion.celebrity}</div>
+              <div>&amp; {champion.professional} · Mirrorball</div>
+            </div>
           </div>
         </div>
       )}
 
       {league.draft_status !== "complete" ? (
-        <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center text-zinc-400">
-          Standings appear once the draft is complete.
-          <div className="mt-3">
-            <Link href="/draft" className="text-mirror underline">
-              Go to the draft room
-            </Link>
-          </div>
+        <div className="glass fade-up mt-6 p-8 text-center text-silver-300" style={{ animationDelay: "120ms" }}>
+          <div className="text-4xl">🪩</div>
+          <p className="mt-3">Standings light up once the draft is complete.</p>
+          <Link href="/draft" className="btn-gold mt-5">
+            Go to the draft room
+          </Link>
         </div>
       ) : (
-        <ol className="mt-4 space-y-2">
+        <ol className="stagger mt-5 space-y-2.5">
           {standings.map((row) => {
             const { active, out } = rosterOf(row.user_id);
             const best = bestRemaining(active);
             const isMe = row.user_id === ctx.user.id;
+            const podium = row.podium_rank <= 3;
             return (
               <li key={row.user_id}>
-                <details className={`group rounded-xl border bg-zinc-900/60 ${isMe ? "border-zinc-600" : "border-zinc-800"}`}>
-                  <summary className="flex cursor-pointer list-none items-center gap-3 p-3">
+                <details className={`glass glass-hover group ${isMe ? "border-gold-400/40" : ""}`}>
+                  <summary className="flex cursor-pointer list-none items-center gap-3 p-3.5">
                     <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold ${
-                        row.podium_rank <= 3 ? "bg-mirror text-zinc-900" : "bg-zinc-800 text-zinc-300"
+                      className={`display flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${
+                        podium
+                          ? "bg-gradient-to-b from-gold-300 to-gold-600 text-plum-950 shadow-[0_0_18px_-4px_rgb(233_194_80/0.9)]"
+                          : "border hairline bg-plum-950/60 text-silver-300"
                       }`}
                     >
                       {row.podium_rank}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 font-semibold">
+                      <div className="flex items-center gap-2 font-semibold text-silver-100">
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorOf(row.user_id)}`} />
                         <span className="truncate">{row.display_name}</span>
-                        {row.is_grand_champion && <span title="Grand Champion">🏆</span>}
+                        {isMe && <span className="rounded-full bg-gold-400/15 px-1.5 text-[10px] text-gold-300">you</span>}
+                        {row.is_grand_champion && <Crown size={14} className="text-gold-300" />}
                       </div>
-                      <div className="truncate text-xs text-zinc-400">
-                        {row.active_couples} active
-                        {best && <> · best: {best.celebrity}</>}
+                      <div className="mt-0.5 flex items-center gap-2 truncate text-xs text-silver-500">
+                        <span className="flex -space-x-2">
+                          {active.slice(0, 4).map((c) => (
+                            <CoupleAvatar key={c.id} couple={c} size="sm" className="ring-plum-950" />
+                          ))}
+                        </span>
+                        <span>
+                          {row.active_couples} dancing{best && <> · best: {best.celebrity}</>}
+                        </span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xl font-bold tabular-nums">{row.survival_points}</div>
-                      <div className="text-[10px] uppercase tracking-wide text-zinc-500">pts</div>
+                      <div className="display text-2xl font-semibold tabular-nums text-silver-100">{row.survival_points}</div>
+                      <div className="eyebrow text-[9px]">pts</div>
                     </div>
+                    <ChevronDown size={18} className="chev text-silver-500" />
                   </summary>
-                  <div className="border-t border-zinc-800 px-3 py-3">
-                    <ul className="space-y-1.5">
-                      {[...active, ...out].map((c) => {
-                        const isOut = out.includes(c);
-                        return (
-                          <li key={c.id} className={`flex items-center justify-between gap-2 text-sm ${isOut ? "text-zinc-500" : ""}`}>
-                            <Link href={`/couples/${c.id}`} className="min-w-0 truncate hover:underline">
-                              {c.celebrity} <span className="text-zinc-500">&amp; {c.professional}</span>
-                            </Link>
-                            <StatusChip couple={c} />
-                          </li>
-                        );
-                      })}
+                  <div className="border-t hairline px-3 pb-3 pt-3">
+                    <ul className="space-y-2">
+                      {[...active, ...out].map((c) => (
+                        <li key={c.id}>
+                          <CoupleCard couple={c} compact />
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </details>
@@ -116,9 +123,9 @@ export default async function StandingsPage() {
         </ol>
       )}
 
-      <p className="mt-6 text-center text-xs text-zinc-500">
-        Survival points: 1 per week a couple survives on your roster. Tiebreaks: active couples, best
-        placement, earlier draft slot. Week {current} is next.
+      <p className="mt-8 text-center text-xs text-silver-500">
+        1 point per week a couple survives on your roster. Tiebreaks: couples still dancing, best placement, earlier draft slot.
+        Week {current} is next.
       </p>
     </Shell>
   );

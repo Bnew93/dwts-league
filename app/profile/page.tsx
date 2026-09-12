@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCtx } from "@/lib/league";
 import { createClient } from "@/lib/supabase/server";
-import { Shell } from "@/components/shell";
+import { Shell, PageTitle } from "@/components/shell";
 
 async function updateDisplayName(formData: FormData) {
   "use server";
@@ -20,26 +20,20 @@ export default async function ProfilePage() {
   const ctx = await getCtx();
   return (
     <Shell ctx={ctx}>
-      <h1 className="text-2xl font-bold">Profile</h1>
-      <p className="mt-1 text-sm text-zinc-400">{ctx.user.email}</p>
+      <PageTitle eyebrow={ctx.isCommissioner ? "Commissioner" : "Member"} title="Profile">
+        <p className="mt-1 text-sm text-silver-500">{ctx.user.email}</p>
+      </PageTitle>
 
-      <form action={updateDisplayName} className="mt-6 space-y-3">
-        <label className="block text-sm text-zinc-300" htmlFor="display_name">
+      <form action={updateDisplayName} className="glass fade-up mt-6 space-y-3 p-5" style={{ animationDelay: "80ms" }}>
+        <label className="block text-sm text-silver-300" htmlFor="display_name">
           Display name
         </label>
-        <input
-          id="display_name"
-          name="display_name"
-          defaultValue={ctx.profile.display_name}
-          maxLength={40}
-          required
-          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-base"
-        />
-        <button className="rounded-md bg-mirror px-4 py-2 font-medium text-zinc-900">Save</button>
+        <input id="display_name" name="display_name" defaultValue={ctx.profile.display_name} maxLength={40} required className="input-dark" />
+        <button className="btn-gold">Save</button>
       </form>
 
-      <form action="/auth/signout" method="post" className="mt-10">
-        <button className="text-sm text-zinc-400 underline hover:text-white">Sign out</button>
+      <form action="/auth/signout" method="post" className="mt-8 text-center">
+        <button className="btn-ghost text-sm">Sign out</button>
       </form>
     </Shell>
   );

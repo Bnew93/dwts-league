@@ -15,6 +15,9 @@ export type ParsedCouple = {
   celebrityKey: string;
   professional: string;
   notability: string;
+  /** Wikipedia article titles (from the cell links), used to fetch page thumbnails. */
+  celebrityWiki: string | null;
+  professionalWiki: string | null;
   /** 1-based row order in the Wikipedia cast table (ABC reveal order). */
   castOrder: number;
   status: CoupleStatus;
@@ -132,6 +135,35 @@ function primaryName(cellHtml: string, fallback: string): string {
   return a ? cellText(a[1]) : fallback;
 }
 
+/**
+ * Article title from the `/wiki/Title` link whose text is the person's name.
+ * A celebrity without an article is often linked to their show instead — that
+ * link's text won't match, so we return null and the UI falls back to initials.
+ */
+export function wikiTitle(cellHtml: string, name: string): string | null {
+  const re = /<a\b[^>]*href="\/wiki\/([^"#?]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  const nameKey = normalizeKey(name);
+  const parts = nameKey.split("-").filter((p) => p.length > 1);
+  const first = parts[0] ?? "";
+  const last = parts[parts.length - 1] ?? "";
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(cellHtml))) {
+    if (normalizeKey(cellText(m[2])) !== nameKey) continue;
+    let title: string;
+    try {
+      title = decodeURIComponent(m[1]).replace(/_/g, " ");
+    } catch {
+      title = m[1].replace(/_/g, " ");
+    }
+    // A piped link like [[Their Show|Celebrity Name]] has matching text but a title that
+    // is not the person. Require the title to carry the surname and start like the first name
+    // (covers "Valentin Chmerkovskiy" for "Val", and "(comedian)" disambiguations).
+    const titleKey = normalizeKey(title);
+    if (titleKey.includes(last) && titleKey.startsWith(first.slice(0, 3))) return title;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Status parsing
 // ---------------------------------------------------------------------------
@@ -222,6 +254,8 @@ export function parseCouples(html: string, warnings: string[]): ParsedCouple[] {
       celebrityKey: normalizeKey(celebrity),
       professional,
       notability: iNot >= 0 ? row[iNot]?.text ?? "" : "",
+      celebrityWiki: wikiTitle(celebCell.html, celebrity),
+      professionalWiki: proCell ? wikiTitle(proCell.html, professional) : null,
       castOrder: couples.length + 1,
       status: st.status,
       statusText,

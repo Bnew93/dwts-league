@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCtx } from "@/lib/league";
 import { createClient } from "@/lib/supabase/server";
-import { Shell } from "@/components/shell";
+import { Shell, PageTitle, SectionTitle } from "@/components/shell";
+import { CoupleCard } from "@/components/couple-card";
+import { Mirrorball } from "@/components/mirrorball";
 import { DraftRoom } from "@/components/draft/draft-room";
 import type { Couple, DraftPick } from "@/lib/types";
 
@@ -22,32 +24,26 @@ export default async function DraftPage() {
   if (league.draft_status === "pending") {
     return (
       <Shell ctx={ctx}>
-        <h1 className="text-2xl font-bold">Draft Room</h1>
-        <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 text-center">
-          <div className="text-4xl">🕺</div>
-          <p className="mt-3 text-zinc-300">The draft hasn&apos;t started yet.</p>
-          <p className="mt-1 text-sm text-zinc-500">
-            {members.length} member{members.length === 1 ? "" : "s"} signed in · {league.roster_size} rounds ·{" "}
-            {league.pick_seconds}s per pick
+        <PageTitle eyebrow="Snake draft" title="Draft Room" />
+        <div className="glass fade-up relative mt-5 overflow-hidden p-8 text-center" style={{ animationDelay: "60ms" }}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(233_194_80/0.22),transparent_70%)]" />
+          <Mirrorball size={72} className="mx-auto" />
+          <p className="display mt-4 text-2xl font-semibold text-silver-100">The ballroom is dark. For now.</p>
+          <p className="mt-1 text-sm text-silver-500">
+            {members.length} member{members.length === 1 ? "" : "s"} signed in · {league.roster_size} rounds · {league.pick_seconds}s per pick
           </p>
           {isCommissioner && (
-            <Link
-              href="/admin"
-              className="mt-5 inline-block rounded-md bg-mirror px-4 py-2 font-medium text-zinc-900"
-            >
-              Go to Admin to start the draft
+            <Link href="/admin" className="btn-gold mt-6">
+              Start the draft from Admin
             </Link>
           )}
         </div>
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Cast</h2>
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        <section className="mt-7">
+          <SectionTitle right={`${couples?.length ?? 0} couples`}>The cast</SectionTitle>
+          <ul className="stagger grid gap-2 sm:grid-cols-2">
             {((couples ?? []) as Couple[]).map((c) => (
-              <li key={c.id} className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-2">
-                <div className="font-medium">{c.celebrity}</div>
-                <div className="text-xs text-zinc-500">
-                  with {c.professional} · {c.notability}
-                </div>
+              <li key={c.id}>
+                <CoupleCard couple={c} right={<span className="text-xs text-silver-500">#{c.cast_order}</span>} />
               </li>
             ))}
           </ul>
@@ -57,7 +53,7 @@ export default async function DraftPage() {
   }
 
   return (
-    <Shell ctx={ctx}>
+    <Shell ctx={ctx} wide>
       <DraftRoom
         league={league}
         members={members}

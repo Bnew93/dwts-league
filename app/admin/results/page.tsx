@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { getCtx } from "@/lib/league";
-import { Shell } from "@/components/shell";
+import { Shell, PageTitle, SectionTitle } from "@/components/shell";
 import { StatusChip } from "@/components/status-chip";
+import { CoupleAvatar } from "@/components/couple-avatar";
 import { loadSeason, currentOwners, weekInfo } from "@/lib/queries";
 import { markOut, setPlacement, undoResult } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const sel = "rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm";
-const btn = "rounded-md bg-mirror px-3 py-1.5 text-sm font-medium text-zinc-900";
+const sel = "input-dark w-auto px-2 py-1.5 text-sm";
 
 export default async function AdminResultsPage() {
   const ctx = await getCtx();
@@ -27,34 +28,33 @@ export default async function AdminResultsPage() {
 
   return (
     <Shell ctx={ctx}>
-      <Link href="/admin" className="text-xs text-zinc-500 hover:text-zinc-300">
-        ← Admin
+      <Link href="/admin" className="inline-flex items-center gap-1 text-xs text-silver-500 transition-colors hover:text-gold-300">
+        <ArrowLeft size={14} /> Admin
       </Link>
-      <h1 className="mt-1 text-2xl font-bold">Results override</h1>
-      <p className="mt-1 text-sm text-zinc-400">
-        Manual results. Every action goes through <code className="text-xs">fn_apply_results</code>, the same path
-        as automated ingestion, so rosters and replacement claims update identically.
-      </p>
+      <PageTitle eyebrow="Commissioner" title="Results override">
+        <p className="mt-1 max-w-prose text-sm text-silver-500">
+          Every action goes through the same database function as automated ingestion, so rosters and replacement claims update identically.
+        </p>
+      </PageTitle>
 
       {league.draft_status !== "complete" && (
-        <p className="mt-4 rounded-md border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
+        <p className="mt-4 rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-200">
           The draft isn&apos;t complete. Eliminations now would affect no rosters.
         </p>
       )}
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-          Remaining · {alive.length}
-        </h2>
-        <ul className="mt-2 space-y-2">
+        <SectionTitle right={`${alive.length}`}>Remaining</SectionTitle>
+        <ul className="stagger space-y-2">
           {alive.map((c) => (
-            <li key={c.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">
-                    {c.celebrity} <span className="text-zinc-500">&amp; {c.professional}</span>
+            <li key={c.id} className="glass p-3">
+              <div className="flex items-center gap-3">
+                <CoupleAvatar couple={c} size="md" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-silver-100">
+                    {c.celebrity} <span className="font-normal text-silver-500">&amp; {c.professional}</span>
                   </div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-silver-500">
                     owner: {nameOf(owners.get(c.id))}
                     {c.placement != null && ` · placed ${c.placement}`}
                   </div>
@@ -76,14 +76,14 @@ export default async function AdminResultsPage() {
                     ))}
                   </select>
                   <input name="placement" type="number" min={1} placeholder="place" className={`${sel} w-20`} />
-                  <button className={btn}>Apply</button>
+                  <button className="btn-gold px-3 py-1.5 text-sm">Apply</button>
                 </form>
                 <form action={setPlacement} className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <input type="hidden" name="couple_id" value={c.id} />
                   <input type="hidden" name="week" value={finaleWeek} />
-                  <span className="text-xs text-zinc-500">Finale:</span>
+                  <span className="text-xs text-silver-500">Finale:</span>
                   <input name="placement" type="number" min={1} required placeholder="1 = 🏆" className={`${sel} w-24`} />
-                  <button className="rounded-md border border-mirror/60 px-3 py-1.5 text-sm text-mirror">Place</button>
+                  <button className="btn-ghost border-gold-400/50 px-3 py-1.5 text-sm text-gold-200">Place</button>
                 </form>
               </div>
             </li>
@@ -92,26 +92,25 @@ export default async function AdminResultsPage() {
       </section>
 
       {out.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Out · {out.length}</h2>
-          <ul className="mt-2 space-y-2">
+        <section className="mt-7">
+          <SectionTitle right={`${out.length}`}>Out</SectionTitle>
+          <ul className="stagger space-y-2">
             {out.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-2 rounded-xl border border-zinc-800/60 bg-zinc-900/30 p-3">
-                <div className="min-w-0">
-                  <div className="truncate text-zinc-300">
-                    {c.celebrity} <span className="text-zinc-600">&amp; {c.professional}</span>
+              <li key={c.id} className="glass flex items-center gap-3 p-3 opacity-90">
+                <CoupleAvatar couple={c} size="sm" dim />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-silver-300">
+                    {c.celebrity} <span className="text-silver-500">&amp; {c.professional}</span>
                   </div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-silver-500">
                     was owned by {nameOf(events.filter((e) => e.couple_id === c.id && (e.event === "eliminated" || e.event === "withdrew")).at(-1)?.user_id)}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <StatusChip couple={c} />
-                  <form action={undoResult}>
-                    <input type="hidden" name="couple_id" value={c.id} />
-                    <button className="rounded-md border border-red-800 px-2 py-1 text-xs text-red-300">Undo</button>
-                  </form>
-                </div>
+                <StatusChip couple={c} />
+                <form action={undoResult}>
+                  <input type="hidden" name="couple_id" value={c.id} />
+                  <button className="btn-danger px-2.5 py-1 text-xs">Undo</button>
+                </form>
               </li>
             ))}
           </ul>
@@ -119,15 +118,15 @@ export default async function AdminResultsPage() {
       )}
 
       {claims.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Replacement claims</h2>
-          <ul className="mt-2 divide-y divide-zinc-800 text-sm">
+        <section className="glass mt-7 p-4">
+          <SectionTitle>Replacement claims</SectionTitle>
+          <ul className="divide-y divide-gold-400/10 text-sm">
             {claims.map((cl) => (
               <li key={cl.id} className="flex items-center justify-between py-2">
-                <span>
+                <span className="text-silver-300">
                   #{cl.queue_pos} {nameOf(cl.user_id)} lost {couples.find((c) => c.id === cl.lost_couple_id)?.celebrity}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-silver-500">
                   {cl.status}
                   {cl.picked_couple_id && ` → ${couples.find((c) => c.id === cl.picked_couple_id)?.celebrity}`}
                 </span>

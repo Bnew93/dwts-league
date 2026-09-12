@@ -54,20 +54,33 @@ export async function removeAllowedEmail(formData: FormData): Promise<void> {
   revalidatePath("/admin");
 }
 
-export async function saveCastOrder(formData: FormData): Promise<void> {
+const urlOrNull = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? null : v))
+  .pipe(z.union([z.null(), z.string().url().startsWith("https://")]));
+
+/** Cast editor: cast_order (only while pending) and photo URLs (any time). */
+export async function saveCast(formData: FormData): Promise<void> {
   const ctx = await requireCommissioner();
-  if (ctx.league.draft_status !== "pending") throw new Error("cast order is locked once the draft starts");
   const supabase = await createClient();
-  const updates: { id: string; cast_order: number }[] = [];
+  const pending = ctx.league.draft_status === "pending";
+  const rows = new Map<string, { cast_order?: number; celebrity_image_url?: string | null; pro_image_url?: string | null }>();
+  const row = (id: string) => rows.get(id) ?? rows.set(id, {}).get(id)!;
   for (const [k, v] of formData.entries()) {
-    const m = /^order:(.+)$/.exec(k);
-    if (m) updates.push({ id: m[1], cast_order: z.coerce.number().int().min(1).parse(v) });
+    const m = /^(order|celeb|pro):(.+)$/.exec(k);
+    if (!m) continue;
+    if (m[1] === "order") {
+      if (pending) row(m[2]).cast_order = z.coerce.number().int().min(1).parse(v);
+    } else if (m[1] === "celeb") row(m[2]).celebrity_image_url = urlOrNull.parse(v);
+    else row(m[2]).pro_image_url = urlOrNull.parse(v);
   }
-  for (const u of updates) {
-    const { error } = await supabase.from("couples").update({ cast_order: u.cast_order }).eq("id", u.id);
+  for (const [id, patch] of rows) {
+    if (Object.keys(patch).length === 0) continue;
+    const { error } = await supabase.from("couples").update(patch).eq("id", id).eq("league_id", ctx.league.id);
     if (error) throw new Error(error.message);
   }
-  revalidatePath("/admin");
+  revalidatePath("/", "layout");
 }
 
 export async function startDraft(): Promise<void> {
