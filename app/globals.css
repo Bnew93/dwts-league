@@ -258,6 +258,37 @@ h1, h2.display, .display { font-family: var(--font-display); }
 @media (max-width: 640px) { .lobby { --lane: 150px; } }
 @media (prefers-reduced-motion: reduce) { .lobby-lane, .lobby-spot, .lobby-colon { animation: none !important; } }
 
+/* ---------------------------------------------------------------------------
+   Draft wrap — curtain call
+   --------------------------------------------------------------------------- */
+.wrap { animation: wrap-in 700ms ease-out both; }
+.wrap-out { animation: wrap-out 800ms ease-in both; }
+@keyframes wrap-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wrap-out { from { opacity: 1; } to { opacity: 0; } }
+.wrap-strips {
+  background:
+    repeating-linear-gradient(115deg, transparent 0 22px, rgb(233 194 80 / 0.16) 22px 23px, transparent 23px 34px),
+    repeating-linear-gradient(65deg, transparent 0 22px, rgb(233 194 80 / 0.12) 22px 23px, transparent 23px 34px);
+  mask-image: radial-gradient(70% 70% at 50% 40%, transparent 30%, black 100%);
+  -webkit-mask-image: radial-gradient(70% 70% at 50% 40%, transparent 30%, black 100%);
+}
+.wrap-ball { animation: wrap-drop 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes wrap-drop { from { transform: translateY(-60vh) scale(0.6); opacity: 0; } 60% { opacity: 1; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.wrap-title { animation: fade-up 800ms 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.wrap-team { animation: wrap-team 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes wrap-team { from { opacity: 0; transform: translateY(24px) rotate(-1deg) scale(0.96); } to { opacity: 1; transform: none; } }
+.wrap-couple { animation: wrap-couple 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes wrap-couple { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.wrap-skip { animation: fade-up 600ms 2.4s both; }
+.wrap-confetti { animation: wrap-fall linear both; will-change: transform; }
+@keyframes wrap-fall {
+  from { transform: translateY(0) rotate(0deg); opacity: 0; }
+  8%   { opacity: 1; }
+  to   { transform: translateY(110vh) rotate(var(--rot, 360deg)); opacity: 0.9; }
+}
+.welcome { animation: fade-up 900ms 100ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) { .wrap-confetti { display: none; } }
+
 details > summary::-webkit-details-marker { display: none; }
 details[open] .chev { transform: rotate(180deg); }
 .chev { transition: transform 200ms ease; }

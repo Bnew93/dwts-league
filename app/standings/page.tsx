@@ -9,7 +9,8 @@ import type { Couple } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function StandingsPage() {
+export default async function StandingsPage({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
+  const { welcome } = await searchParams;
   const ctx = await getCtx();
   const { league, members } = ctx;
   const { couples, events, episodes, standings, scores } = await loadSeason(league.id, league.season);
@@ -34,6 +35,14 @@ export default async function StandingsPage() {
 
   return (
     <Shell ctx={ctx}>
+      {welcome && (
+        <div className="welcome mb-4 flex items-center gap-3 rounded-xl border border-gold-400/40 bg-gold-400/10 px-4 py-2.5 text-sm text-gold-100">
+          <span className="text-lg">🪩</span>
+          <span>
+            The draft is in the books. Rosters lock in here; first show is Tuesday at 8/7c.
+          </span>
+        </div>
+      )}
       <PageTitle eyebrow={`Season ${league.season}`} title="Standings" meta={aired.size ? `Through week ${Math.max(...aired)}` : "Pre-season"} />
 
       {champion && championOwner && (

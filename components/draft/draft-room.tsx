@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Search, Timer, Check, X, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { buildBoard, pickOwner, roundOf, secondsLeft, leftoverCount } from "@/lib/draft";
@@ -11,6 +10,7 @@ import { OWNER_BG, OWNER_BORDER } from "@/lib/colors";
 import type { Couple, DraftPick } from "@/lib/types";
 import { CoupleMarquee, CoupleRow, CoupleTicket, CoupleTile } from "@/components/couple";
 import { makePick, serverNow } from "@/app/draft/actions";
+import { DraftWrap } from "./draft-wrap";
 
 type Props = {
   league: League;
@@ -24,7 +24,6 @@ type Props = {
 type Tab = "available" | "board" | "team";
 
 export function DraftRoom({ league: initialLeague, members, me, isCommissioner, initialCouples, initialPicks }: Props) {
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [league, setLeague] = useState(initialLeague);
   const [couples, setCouples] = useState(initialCouples);
@@ -83,9 +82,11 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
     return () => clearInterval(t);
   }, []);
 
+  // Final pick → curtain call, then the wrap routes to standings itself.
+  const [wrap, setWrap] = useState(false);
   useEffect(() => {
-    if (league.draft_status === "complete") router.push("/standings");
-  }, [league.draft_status, router]);
+    if (league.draft_status === "complete") setWrap(true);
+  }, [league.draft_status]);
 
   const pickNo = league.current_pick + 1;
   const totalPicks = league.roster_size * order.length;
@@ -127,6 +128,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
 
   return (
     <div className="mx-auto flex h-full max-w-6xl flex-col sm:px-4 sm:pt-4">
+      {wrap && <DraftWrap order={order} members={members} picks={picks} couples={couples} />}
       {/* On the clock */}
       <div
         className={`z-10 shrink-0 border-b px-4 py-3 backdrop-blur-md transition-colors sm:rounded-2xl sm:border ${
