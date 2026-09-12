@@ -11,12 +11,12 @@ export async function GET(request: Request) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data.user) return NextResponse.redirect(`${origin}/login?error=auth`);
 
-  const { data: membership } = await supabase
-    .from("league_members")
-    .select("league_id")
-    .eq("user_id", data.user.id)
-    .limit(1)
-    .maybeSingle();
+  let { data: membership } = await supabase.from("league_members").select("league_id").eq("user_id", data.user.id).limit(1).maybeSingle();
+  if (!membership) {
+    // allowlisted after first sign-in → join now
+    const { data: claimed } = await supabase.rpc("fn_claim_membership");
+    if (claimed) ({ data: membership } = await supabase.from("league_members").select("league_id").eq("user_id", data.user.id).limit(1).maybeSingle());
+  }
 
   if (!membership) {
     await supabase.auth.signOut();

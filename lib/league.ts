@@ -56,10 +56,19 @@ export async function getCtx(): Promise<Ctx> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: profile, error: profileErr }, { data: membership, error: memberErr }] = await Promise.all([
+  const loadMembership = () => supabase.from("league_members").select("league_id, is_player").eq("user_id", user.id).limit(1).maybeSingle();
+  const [{ data: profile, error: profileErr }, first] = await Promise.all([
     supabase.from("profiles").select("id, display_name, avatar_url, role, is_mock, last_reveal_key").eq("id", user.id).maybeSingle(),
-    supabase.from("league_members").select("league_id, is_player").eq("user_id", user.id).limit(1).maybeSingle(),
+    loadMembership(),
   ]);
+  let membership = first.data;
+  let memberErr = first.error;
+
+  // Allowlisted after the account already existed? Claim membership now instead of bouncing.
+  if (!membership && !memberErr) {
+    const { data: claimed } = await supabase.rpc("fn_claim_membership");
+    if (claimed) ({ data: membership, error: memberErr } = await loadMembership());
+  }
 
   // A transient query failure must not sign anyone out; only a confirmed "no membership" does.
   if (profileErr || memberErr) throw new Error(`league lookup failed: ${(profileErr ?? memberErr)!.message}`);
