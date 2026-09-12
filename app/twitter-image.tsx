@@ -6,22 +6,17 @@ export const alt = BRAND;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/** Google Fonts serves TTF to old user agents; Satori needs TTF/OTF/WOFF (not woff2). */
-async function googleFont(family: string, weight: number, text: string): Promise<ArrayBuffer | null> {
+/** Bundled display face (Satori needs TTF/OTF/WOFF). Falls back to the built-in font if it can't load. */
+async function displayFont(): Promise<ArrayBuffer | null> {
   try {
-    const css = await fetch(`https://fonts.googleapis.com/css2?family=${family}:ital,wght@1,${weight}&text=${encodeURIComponent(text)}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0" },
-    }).then((r) => r.text());
-    const url = /src: url\(([^)]+)\) format\('(?:truetype|opentype)'\)/.exec(css)?.[1];
-    if (!url) return null;
-    return await fetch(url).then((r) => r.arrayBuffer());
+    return await fetch(new URL("./fonts/PlayfairDisplay-SemiBoldItalic.woff", import.meta.url)).then((r) => r.arrayBuffer());
   } catch {
     return null;
   }
 }
 
 export default async function OpengraphImage() {
-  const display = await googleFont("Playfair+Display", 600, BRAND + "Season 35");
+  const display = await displayFont();
   const strips = Array.from({ length: 14 }, (_, i) => i);
 
   return new ImageResponse(
@@ -74,7 +69,8 @@ export default async function OpengraphImage() {
     ),
     {
       ...size,
-      fonts: display ? [{ name: "Playfair", data: display, style: "italic", weight: 600 }] : [],
+      // omit `fonts` entirely when the file is unavailable so the renderer keeps its default font
+      ...(display ? { fonts: [{ name: "Playfair", data: display, style: "italic" as const, weight: 600 as const }] } : {}),
     },
   );
 }
