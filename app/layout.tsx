@@ -2,13 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { StageBackdrop } from "@/components/stage-backdrop";
+import { BRAND } from "@/lib/brand";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap", style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
-  title: "DWTS League",
-  description: "Dancing with the Stars fantasy league",
+  title: BRAND,
+  description: `${BRAND} — a Dancing with the Stars fantasy league`,
 };
 
 export const viewport: Viewport = {

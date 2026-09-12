@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Trophy, Users, GitBranch, Shield, Sparkles, type LucideIcon } from "lucide-react";
 import { Mirrorball } from "./mirrorball";
+import { BRAND } from "@/lib/brand";
 
 export type NavItem = { href: string; label: string; icon: "draft" | "standings" | "team" | "bracket" | "admin" };
 const ICONS: Record<NavItem["icon"], LucideIcon> = {
@@ -23,10 +24,10 @@ export function Nav({ items, leagueName, displayName, avatarUrl }: { items: NavI
     <>
       <header className="sticky top-0 z-20 border-b hairline bg-plum-950/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5">
-          <Link href="/" className="group flex items-center gap-2.5">
+          <Link href="/" className="group flex min-w-0 items-center gap-2.5" title={leagueName}>
             <Mirrorball size={30} />
-            <span className="display text-lg font-semibold tracking-tight">
-              <span className="gold-text">{leagueName}</span>
+            <span className="display truncate text-[15px] font-semibold italic tracking-tight sm:text-lg">
+              <span className="gold-text">{BRAND}</span>
             </span>
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">

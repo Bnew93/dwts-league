@@ -9,7 +9,7 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const LEAGUE_NAME = "DWTS League";
+const LEAGUE_NAME = "Drafting on the Dance Floor";
 const SEASON = 35;
 
 type Member = { email: string; display_name: string; commissioner: boolean };
