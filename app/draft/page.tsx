@@ -28,7 +28,7 @@ export default async function DraftPage() {
   }
 
   return (
-    <Shell ctx={ctx} wide>
+    <Shell ctx={ctx} fill>
       <DraftRoom
         league={league}
         members={members}

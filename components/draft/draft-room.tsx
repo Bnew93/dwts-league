@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Timer, Check, X, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -126,10 +126,10 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   }
 
   return (
-    <div className="-mx-4 sm:mx-0">
+    <div className="mx-auto flex h-full max-w-6xl flex-col sm:px-4 sm:pt-4">
       {/* On the clock */}
       <div
-        className={`sticky top-[53px] z-10 border-b px-4 py-3 backdrop-blur-md transition-colors sm:rounded-2xl sm:border ${
+        className={`z-10 shrink-0 border-b px-4 py-3 backdrop-blur-md transition-colors sm:rounded-2xl sm:border ${
           myTurn ? "border-gold-400/60 bg-gold-400/15 shadow-glow-sm" : "hairline bg-plum-950/80"
         }`}
       >
@@ -178,7 +178,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
       </div>
 
       {/* Mobile tabs */}
-      <div className="flex border-b hairline text-sm sm:hidden">
+      <div className="flex shrink-0 border-b hairline text-sm sm:hidden">
         {(["available", "board", "team"] as Tab[]).map((t) => (
           <button
             key={t}
@@ -191,14 +191,15 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
         ))}
       </div>
 
-      <div className="grid gap-4 px-4 pt-4 sm:grid-cols-[1fr_1.25fr_0.9fr] sm:px-0">
-        {/* Available */}
-        <section className={tab === "available" ? "" : "hidden sm:block"}>
-          <div className="relative">
+      {/* Panels: the page itself never scrolls; only the couples list does. */}
+      <div className="grid min-h-0 flex-1 gap-4 px-4 pt-4 sm:grid-cols-[1fr_1.3fr_0.9fr] sm:px-0 sm:pb-4">
+        {/* Available (scrolls) */}
+        <section className={`flex min-h-0 flex-col ${tab === "available" ? "" : "hidden sm:flex"}`}>
+          <div className="relative shrink-0">
             <Search size={16} className="pointer-events-none absolute left-3 top-3 text-silver-500" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search couples" className="input-dark pl-9" />
           </div>
-          <ul className={`stagger mt-3 grid grid-cols-2 gap-2.5 ${myTurn ? "" : "opacity-75"}`}>
+          <ul className={`stagger mt-3 grid min-h-0 flex-1 grid-cols-2 content-start gap-2.5 overflow-y-auto pb-24 pr-1 sm:pb-2 ${myTurn ? "" : "opacity-75"}`}>
             {filtered.map((c) => (
               <li key={c.id}>
                 <CoupleMarquee
@@ -214,62 +215,56 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
           </ul>
         </section>
 
-        {/* Board */}
-        <section className={tab === "board" ? "" : "hidden sm:block"}>
+        {/* Board (fixed) */}
+        <section className={`min-h-0 ${tab === "board" ? "" : "hidden sm:block"}`}>
           <div className="eyebrow mb-2">Board</div>
-          <div className="glass overflow-x-auto p-2">
-            <table className="w-full min-w-[500px] border-separate border-spacing-1 text-xs">
-              <thead>
-                <tr>
-                  <th className="w-7 text-left text-silver-500">Rd</th>
-                  {order.map((id) => (
-                    <th key={id} className="text-left font-medium text-silver-300">
-                      <span className={`mr-1 inline-block h-2 w-2 rounded-full ${OWNER_BG[slot(id)]}`} />
-                      {nameOf(id)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {board.map((row, r) => (
-                  <tr key={r}>
-                    <td className="text-silver-500">{r + 1}</td>
-                    {order.map((uid) => {
-                      const cell = row.find((c) => c.userId === uid)!;
-                      const p = pickAt(cell.pickNo);
-                      const c = p ? coupleById.get(p.couple_id) : undefined;
-                      const isNow = cell.pickNo === pickNo && league.draft_status === "live";
-                      const justIn = c && flash === c.id;
-                      return (
-                        <td key={uid} className="p-0 align-top">
-                          {c ? (
-                            <CoupleTile couple={c} pickNo={cell.pickNo} auto={p?.auto} className={justIn ? "fade-up ring-1 ring-gold-300" : ""} />
-                          ) : (
-                            <span
-                              className={`relative block h-[74px] rounded-[10px] border p-1.5 transition-all ${
-                                isNow ? "border-gold-400 bg-gold-400/15 shadow-glow-sm" : "border-plum-700/40 bg-plum-950/30"
-                              }`}
-                            >
-                              <span className="text-[10px] text-silver-500">#{cell.pickNo}</span>
-                              {isNow && (
-                                <span className="absolute inset-x-2 bottom-1.5 flex items-center gap-1 text-[11px] font-semibold text-gold-300">
-                                  <Zap size={11} /> on the clock
-                                </span>
-                              )}
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="glass overflow-x-auto p-2.5">
+            <div
+              className="grid min-w-[460px] gap-1.5 text-xs"
+              style={{ gridTemplateColumns: `1.5rem repeat(${order.length}, minmax(0, 1fr))` }}
+            >
+              <div className="self-end text-silver-500">Rd</div>
+              {order.map((id) => (
+                <div key={id} className="flex min-w-0 items-center gap-1.5 self-end font-medium text-silver-300">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${OWNER_BG[slot(id)]}`} />
+                  <span className="truncate">{nameOf(id)}</span>
+                </div>
+              ))}
+              {board.map((row, r) => (
+                <Fragment key={r}>
+                  <div className="self-center text-silver-500">{r + 1}</div>
+                  {order.map((uid) => {
+                    const cell = row.find((c) => c.userId === uid)!;
+                    const p = pickAt(cell.pickNo);
+                    const c = p ? coupleById.get(p.couple_id) : undefined;
+                    const isNow = cell.pickNo === pickNo && league.draft_status === "live";
+                    const justIn = c && flash === c.id;
+                    return c ? (
+                      <CoupleTile key={uid} couple={c} pickNo={cell.pickNo} auto={p?.auto} className={`min-w-0 ${justIn ? "fade-up ring-1 ring-gold-300" : ""}`} />
+                    ) : (
+                      <span
+                        key={uid}
+                        className={`relative block h-[74px] min-w-0 rounded-[10px] border p-1.5 transition-all ${
+                          isNow ? "border-gold-400 bg-gold-400/15 shadow-glow-sm" : "border-plum-700/40 bg-plum-950/30"
+                        }`}
+                      >
+                        <span className="text-[10px] text-silver-500">#{cell.pickNo}</span>
+                        {isNow && (
+                          <span className="absolute inset-x-2 bottom-1.5 flex items-center gap-1 truncate text-[11px] font-semibold text-gold-300">
+                            <Zap size={11} className="shrink-0" /> on the clock
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* Team */}
-        <section className={tab === "team" ? "" : "hidden sm:block"}>
+        {/* Team (fixed; scrolls only if it must) */}
+        <section className={`min-h-0 overflow-y-auto pb-24 sm:pb-0 ${tab === "team" ? "" : "hidden sm:block"}`}>
           <div className="eyebrow mb-2">{teamOf === me ? "My team" : `${nameOf(teamOf)}'s team`}</div>
           <ul className="stagger space-y-2">
             {myPicks.map((p) => {

@@ -1,8 +1,23 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import type { Ctx } from "@/lib/league";
 import { Nav, type NavItem } from "./nav";
 
-export function Shell({ ctx, children, wide = false, bare = false }: { ctx: Ctx; children: React.ReactNode; wide?: boolean; bare?: boolean }) {
+export function Shell({
+  ctx,
+  children,
+  wide = false,
+  bare = false,
+  fill = false,
+}: {
+  ctx: Ctx;
+  children: React.ReactNode;
+  wide?: boolean;
+  /** no max-width / padding on main */
+  bare?: boolean;
+  /** lock the page to the viewport; children manage their own scrolling */
+  fill?: boolean;
+}) {
   const { league, profile, isCommissioner } = ctx;
   const items: NavItem[] = [];
   if (league.draft_status !== "complete") items.push({ href: "/draft", label: "Draft", icon: "draft" });
@@ -11,8 +26,10 @@ export function Shell({ ctx, children, wide = false, bare = false }: { ctx: Ctx;
   items.push({ href: "/bracket", label: "Bracket", icon: "bracket" });
   if (isCommissioner) items.push({ href: "/admin", label: "Admin", icon: "admin" });
 
+  const Wrap = fill ? "div" : Fragment;
+  const wrapProps = fill ? { className: "flex h-dvh flex-col overflow-hidden" } : {};
   return (
-    <>
+    <Wrap {...wrapProps}>
       <Nav items={items} leagueName={league.name} displayName={profile.display_name} avatarUrl={profile.avatar_url} />
       {league.is_mock && (
         <div className="bg-gold-400/15 px-4 py-1.5 text-center text-xs text-gold-200">
@@ -27,8 +44,18 @@ export function Shell({ ctx, children, wide = false, bare = false }: { ctx: Ctx;
           )}
         </div>
       )}
-      <main className={bare ? "w-full pb-20 sm:pb-0" : `mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>
-    </>
+      <main
+        className={
+          fill
+            ? "min-h-0 w-full flex-1"
+            : bare
+              ? "w-full pb-20 sm:pb-0"
+              : `mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`
+        }
+      >
+        {children}
+      </main>
+    </Wrap>
   );
 }
 
