@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { BRAND, TAGLINE } from "@/lib/brand";
+import { mirrorballDataUri } from "@/lib/mirrorball";
 
 export const runtime = "edge";
 export const alt = BRAND;
@@ -46,14 +47,7 @@ export default async function OpengraphImage() {
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 150, background: "linear-gradient(180deg, rgba(120,72,30,0) 0%, rgba(120,72,30,0.35) 60%, rgba(60,34,14,0.7) 100%)" }} />
 
         {/* mirrorball */}
-        <div style={{ position: "absolute", left: 92, top: 175, width: 260, height: 260, borderRadius: 9999, background: "radial-gradient(circle at 35% 30%, #ffffff 0%, #b9b6c9 55%, #4c4860 100%)", boxShadow: "0 0 90px rgba(233,194,80,0.55)", display: "flex" }} />
-        <div style={{ position: "absolute", left: 92, top: 175, width: 260, height: 260, borderRadius: 9999, border: "3px solid rgba(245,217,122,0.55)", display: "flex" }} />
-        {/* facets */}
-        {[
-          [150, 210], [200, 200], [250, 215], [300, 245], [130, 265], [180, 275], [230, 290], [280, 310], [160, 330], [210, 345], [260, 365], [310, 350], [190, 395], [240, 405],
-        ].map(([x, y], i) => (
-          <div key={i} style={{ position: "absolute", left: x, top: y, width: 26, height: 26, borderRadius: 4, background: i % 3 === 0 ? "#f3f2f7" : i % 3 === 1 ? "#c9c6d6" : "#8f8ba1", opacity: 0.9, transform: `rotate(${(i * 23) % 30 - 15}deg)` }} />
-        ))}
+        <img src={mirrorballDataUri({ size: 300, seed: 7, tile: 8.5, id: "og" })} width={300} height={300} style={{ position: "absolute", left: 72, top: 165 }} alt="" />
 
         {/* copy */}
         <div style={{ position: "absolute", left: 420, top: 150, right: 70, display: "flex", flexDirection: "column" }}>
