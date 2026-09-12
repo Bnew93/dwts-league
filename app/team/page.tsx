@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Clock } from "lucide-react";
 import { getCtx } from "@/lib/league";
 import { Shell, PageTitle, SectionTitle } from "@/components/shell";
-import { CoupleCard } from "@/components/couple-card";
+import { CoupleRow } from "@/components/couple";
 import { StatusChip } from "@/components/status-chip";
 import { loadSeason, currentOwners, weekInfo, scoreTotals } from "@/lib/queries";
+import { ownerIndex } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function TeamPage() {
   const totals = scoreTotals(scores);
   const { current } = weekInfo(episodes);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.display_name ?? "—";
+  const mySlot = ownerIndex(league.draft_order, me, members);
 
   const everMine = new Set(events.filter((e) => e.user_id === me && (e.event === "drafted" || e.event === "replacement")).map((e) => e.couple_id));
   const mine = couples.filter((c) => everMine.has(c.id));
@@ -34,11 +36,13 @@ export default async function TeamPage() {
       <PageTitle
         eyebrow={ctx.profile.display_name}
         title="My Team"
-        meta={myRow && (
-          <span>
-            <span className="display text-2xl text-silver-100">#{myRow.podium_rank}</span> · {myRow.survival_points} pts
-          </span>
-        )}
+        meta={
+          myRow && (
+            <span>
+              <span className="display text-2xl text-silver-100">#{myRow.podium_rank}</span> · {myRow.survival_points} pts
+            </span>
+          )
+        }
       />
 
       {league.draft_status !== "complete" && (
@@ -88,12 +92,13 @@ export default async function TeamPage() {
         <ul className="stagger space-y-2">
           {active.map((c) => (
             <li key={c.id}>
-              <CoupleCard
+              <CoupleRow
                 couple={c}
+                owner={mySlot}
                 right={
                   <>
                     <StatusChip couple={c} />
-                    {(totals.get(c.id) ?? 0) > 0 && <span className="text-xs text-silver-500">{totals.get(c.id)} judges&apos; pts</span>}
+                    {(totals.get(c.id) ?? 0) > 0 && <span>{totals.get(c.id)} judges&apos; pts</span>}
                   </>
                 }
               />
@@ -111,7 +116,7 @@ export default async function TeamPage() {
           <ul className="stagger space-y-2">
             {out.map((c) => (
               <li key={c.id}>
-                <CoupleCard couple={c} dim compact />
+                <CoupleRow couple={c} owner={mySlot} note={null} />
               </li>
             ))}
           </ul>

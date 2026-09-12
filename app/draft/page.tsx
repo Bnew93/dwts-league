@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCtx } from "@/lib/league";
 import { createClient } from "@/lib/supabase/server";
 import { Shell, PageTitle, SectionTitle } from "@/components/shell";
-import { CoupleCard } from "@/components/couple-card";
+import { CoupleMarquee } from "@/components/couple";
 import { Mirrorball } from "@/components/mirrorball";
 import { DraftRoom } from "@/components/draft/draft-room";
 import type { Couple, DraftPick } from "@/lib/types";
@@ -40,10 +40,10 @@ export default async function DraftPage() {
         </div>
         <section className="mt-7">
           <SectionTitle right={`${couples?.length ?? 0} couples`}>The cast</SectionTitle>
-          <ul className="stagger grid gap-2 sm:grid-cols-2">
+          <ul className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {((couples ?? []) as Couple[]).map((c) => (
               <li key={c.id}>
-                <CoupleCard couple={c} right={<span className="text-xs text-silver-500">#{c.cast_order}</span>} />
+                <CoupleMarquee couple={c} corner={<span />} />
               </li>
             ))}
           </ul>

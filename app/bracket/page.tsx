@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCtx } from "@/lib/league";
 import { Shell, PageTitle } from "@/components/shell";
-import { CoupleAvatar } from "@/components/couple-avatar";
+import { CoupleFace } from "@/components/couple";
 import { loadSeason, ownershipHistory, currentOwners, weekInfo } from "@/lib/queries";
 import { OWNER_BG, OWNER_TEXT, ownerIndex } from "@/lib/colors";
 import type { Couple } from "@/lib/types";
@@ -120,7 +120,7 @@ function GroupRows({ label, color, rows }: { label: string; color: string; rows:
         <tr key={r.couple.id} className="group">
           <td className="sticky left-0 z-10 bg-plum-900/95 pl-2 pr-3 backdrop-blur">
             <Link href={`/couples/${r.couple.id}`} className="flex max-w-[230px] items-center gap-2 py-0.5 hover:underline">
-              <CoupleAvatar couple={r.couple} size="sm" dim={!r.alive} />
+              <CoupleFace couple={r.couple} size={30} ring={r.alive ? "ring-gold-400/50" : "ring-silver-500/30"} />
               <span className={`truncate ${r.alive ? "text-silver-100" : "text-silver-500"}`}>
                 {r.couple.celebrity}
                 <span className="text-silver-500/70"> · {r.couple.professional.split(" ")[0]}</span>

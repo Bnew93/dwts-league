@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCtx } from "@/lib/league";
 import { createClient } from "@/lib/supabase/server";
 import { Shell, PageTitle, SectionTitle } from "@/components/shell";
-import { CoupleAvatar } from "@/components/couple-avatar";
+import { CoupleFace } from "@/components/couple";
 import { leftoverCount } from "@/lib/draft";
 import type { Couple, AllowedEmail } from "@/lib/types";
 import { saveSettings, addAllowedEmail, removeAllowedEmail, saveCast, startDraft, resetDraft, startMockDraft, endMockDraft } from "./actions";
@@ -173,32 +173,22 @@ export default async function AdminPage() {
         <section className="glass p-4">
           <SectionTitle right={`${cast.length} couples`}>Cast</SectionTitle>
           <p className="mb-3 text-xs text-silver-500">
-            Cast order drives timer auto-picks (lowest number first) and is locked once the draft starts. Photo URLs can be changed any time; blank falls
-            back to initials.
+            Cast order drives timer auto-picks (lowest number first) and is locked once the draft starts. The photo URL is the official couple promo shot;
+            it can be swapped any time, and blank falls back to initials.
           </p>
           <form action={saveCast}>
             <ul className="divide-y divide-gold-400/10">
               {cast.map((c) => (
-                <li key={c.id} className="grid gap-2 py-3 sm:grid-cols-[auto_1fr] sm:items-start">
+                <li key={c.id} className="grid gap-2 py-3 sm:grid-cols-[auto_1fr] sm:items-center">
                   <div className="flex items-center gap-3">
-                    <input
-                      name={`order:${c.id}`}
-                      type="number"
-                      min={1}
-                      defaultValue={c.cast_order}
-                      disabled={!pending}
-                      className="input-dark w-16 px-2 py-1 text-center"
-                    />
-                    <CoupleAvatar couple={c} size="md" />
-                    <div className="min-w-0 sm:w-44">
+                    <input name={`order:${c.id}`} type="number" min={1} defaultValue={c.cast_order} disabled={!pending} className="input-dark w-16 px-2 py-1 text-center" />
+                    <CoupleFace couple={c} size={40} ring="ring-gold-400/50" />
+                    <div className="min-w-0 sm:w-48">
                       <div className="truncate font-semibold text-silver-100">{c.celebrity}</div>
                       <div className="truncate text-xs text-silver-500">with {c.professional}</div>
                     </div>
                   </div>
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    <input name={`celeb:${c.id}`} defaultValue={c.celebrity_image_url ?? ""} placeholder="Celebrity photo URL" className="input-dark px-2 py-1 text-xs" />
-                    <input name={`pro:${c.id}`} defaultValue={c.pro_image_url ?? ""} placeholder="Pro photo URL" className="input-dark px-2 py-1 text-xs" />
-                  </div>
+                  <input name={`photo:${c.id}`} defaultValue={c.image_url ?? ""} placeholder="Couple photo URL (https)" className="input-dark px-2 py-1 text-xs" />
                 </li>
               ))}
             </ul>

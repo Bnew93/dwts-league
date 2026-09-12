@@ -65,15 +65,14 @@ export async function saveCast(formData: FormData): Promise<void> {
   const ctx = await requireCommissioner();
   const supabase = await createClient();
   const pending = ctx.league.draft_status === "pending";
-  const rows = new Map<string, { cast_order?: number; celebrity_image_url?: string | null; pro_image_url?: string | null }>();
+  const rows = new Map<string, { cast_order?: number; image_url?: string | null }>();
   const row = (id: string) => rows.get(id) ?? rows.set(id, {}).get(id)!;
   for (const [k, v] of formData.entries()) {
-    const m = /^(order|celeb|pro):(.+)$/.exec(k);
+    const m = /^(order|photo):(.+)$/.exec(k);
     if (!m) continue;
     if (m[1] === "order") {
       if (pending) row(m[2]).cast_order = z.coerce.number().int().min(1).parse(v);
-    } else if (m[1] === "celeb") row(m[2]).celebrity_image_url = urlOrNull.parse(v);
-    else row(m[2]).pro_image_url = urlOrNull.parse(v);
+    } else row(m[2]).image_url = urlOrNull.parse(v);
   }
   for (const [id, patch] of rows) {
     if (Object.keys(patch).length === 0) continue;

@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getCtx } from "@/lib/league";
 import { Shell, PageTitle, SectionTitle } from "@/components/shell";
 import { StatusChip } from "@/components/status-chip";
-import { CoupleAvatar } from "@/components/couple-avatar";
+import { CoupleFace } from "@/components/couple";
 import { loadSeason, currentOwners, weekInfo } from "@/lib/queries";
 import { markOut, setPlacement, undoResult } from "./actions";
 
@@ -49,7 +49,7 @@ export default async function AdminResultsPage() {
           {alive.map((c) => (
             <li key={c.id} className="glass p-3">
               <div className="flex items-center gap-3">
-                <CoupleAvatar couple={c} size="md" />
+                <CoupleFace couple={c} size={44} ring="ring-gold-400/50" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-semibold text-silver-100">
                     {c.celebrity} <span className="font-normal text-silver-500">&amp; {c.professional}</span>
@@ -97,7 +97,7 @@ export default async function AdminResultsPage() {
           <ul className="stagger space-y-2">
             {out.map((c) => (
               <li key={c.id} className="glass flex items-center gap-3 p-3 opacity-90">
-                <CoupleAvatar couple={c} size="sm" dim />
+                <CoupleFace couple={c} size={34} ring="ring-silver-500/30" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-silver-300">
                     {c.celebrity} <span className="text-silver-500">&amp; {c.professional}</span>

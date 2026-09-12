@@ -4,8 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { getCtx } from "@/lib/league";
 import { Shell, SectionTitle } from "@/components/shell";
 import { StatusChip, placementLabel } from "@/components/status-chip";
-import { CoupleAvatar } from "@/components/couple-avatar";
-import { loadSeason, ownershipHistory, weekInfo } from "@/lib/queries";
+import { CoupleTicket } from "@/components/couple";
+import { loadSeason, ownershipHistory, weekInfo, currentOwners } from "@/lib/queries";
 import { OWNER_BG, ownerIndex } from "@/lib/colors";
 import { ScoreChart } from "@/components/score-chart";
 
@@ -21,6 +21,7 @@ export default async function CouplePage({ params }: { params: Promise<{ id: str
 
   const { weeks, aired } = weekInfo(episodes);
   const history = ownershipHistory(events, couple.id);
+  const owner = currentOwners(events).get(couple.id);
   const nameOf = (uid: string) => members.find((m) => m.id === uid)?.display_name ?? "—";
   const colorOf = (uid: string) => OWNER_BG[ownerIndex(league.draft_order, uid, members) % OWNER_BG.length];
   const myScores = scores
@@ -29,7 +30,6 @@ export default async function CouplePage({ params }: { params: Promise<{ id: str
     .sort((a, b) => a.week - b.week);
   const lastAired = aired.size ? Math.max(...aired) : 0;
   const chartWeeks = weeks.filter((w) => w <= Math.max(lastAired, couple.elimination_week ?? 0, myScores.at(-1)?.week ?? 0));
-  const out = couple.status === "eliminated" || couple.status === "withdrew";
 
   return (
     <Shell ctx={ctx}>
@@ -37,20 +37,28 @@ export default async function CouplePage({ params }: { params: Promise<{ id: str
         <ArrowLeft size={14} /> Bracket
       </Link>
 
-      <div className="glass fade-up relative mt-3 overflow-hidden p-5">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_70%_at_20%_0%,rgb(233_194_80/0.22),transparent_70%)]" />
-        <div className="relative flex items-start gap-4">
-          <CoupleAvatar couple={couple} size="xl" dim={out} />
-          <div className="min-w-0 flex-1">
-            <div className="eyebrow">Cast #{couple.cast_order}</div>
-            <h1 className="display mt-0.5 text-3xl font-semibold leading-tight text-silver-100">{couple.celebrity}</h1>
-            <div className="text-silver-300">with {couple.professional}</div>
-            <div className="mt-1 text-sm text-silver-500">{couple.notability}</div>
-            <div className="mt-3">
+      <div className="fade-up mt-3">
+        <CoupleTicket
+          couple={couple}
+          eyebrow={
+            <>
+              Cast #{couple.cast_order}
+              {owner && (
+                <>
+                  {" · "}
+                  <span className={`mr-1 inline-block h-2 w-2 rounded-full align-middle ${colorOf(owner)}`} />
+                  {nameOf(owner)}
+                </>
+              )}
+            </>
+          }
+          foot={
+            <>
               <StatusChip couple={couple} />
-            </div>
-          </div>
-        </div>
+              {myScores.length > 0 && <span className="text-xs text-silver-500 tabular-nums">{myScores.reduce((a, s) => a + s.total, 0)} judges&apos; pts</span>}
+            </>
+          }
+        />
       </div>
 
       <section className="glass fade-up mt-4 p-4" style={{ animationDelay: "60ms" }}>

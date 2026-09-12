@@ -2,8 +2,7 @@ import Link from "next/link";
 import { ChevronDown, Crown } from "lucide-react";
 import { getCtx } from "@/lib/league";
 import { Shell, PageTitle } from "@/components/shell";
-import { CoupleCard } from "@/components/couple-card";
-import { CoupleAvatar } from "@/components/couple-avatar";
+import { CoupleRow, CoupleFace, CoupleTicket } from "@/components/couple";
 import { loadSeason, currentOwners, weekInfo, scoreTotals } from "@/lib/queries";
 import { OWNER_BG, ownerIndex } from "@/lib/colors";
 import type { Couple } from "@/lib/types";
@@ -20,7 +19,7 @@ export default async function StandingsPage() {
   const champion = couples.find((c) => c.placement === 1);
   const championOwner = champion ? owners.get(champion.id) ?? events.find((e) => e.couple_id === champion.id)?.user_id : null;
   const nameOf = (id: string) => members.find((m) => m.id === id)?.display_name ?? "—";
-  const colorOf = (id: string) => OWNER_BG[ownerIndex(league.draft_order, id, members) % OWNER_BG.length];
+  const slot = (id: string) => ownerIndex(league.draft_order, id, members);
 
   const rosterOf = (userId: string) => {
     const ids = new Set<string>();
@@ -38,20 +37,15 @@ export default async function StandingsPage() {
       <PageTitle eyebrow={`Season ${league.season}`} title="Standings" meta={aired.size ? `Through week ${Math.max(...aired)}` : "Pre-season"} />
 
       {champion && championOwner && (
-        <div className="glass fade-up relative mt-5 overflow-hidden p-6 text-center" style={{ animationDelay: "80ms" }}>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgb(233_194_80/0.28),transparent_70%)]" />
-          <Crown className="mx-auto text-gold-300 drop-shadow-[0_0_18px_rgb(233_194_80/0.8)]" size={40} />
-          <div className="eyebrow mt-2">Grand Champion</div>
-          <div className="display mt-1 text-3xl font-semibold">
-            <span className="gold-text">{nameOf(championOwner)}</span>
+        <div className="fade-up mt-5" style={{ animationDelay: "80ms" }}>
+          <div className="mb-2 flex items-center gap-2">
+            <Crown className="text-gold-300 drop-shadow-[0_0_14px_rgb(233_194_80/.8)]" size={22} />
+            <span className="eyebrow">Grand Champion</span>
+            <span className="display text-xl font-semibold">
+              <span className="gold-text">{nameOf(championOwner)}</span>
+            </span>
           </div>
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <CoupleAvatar couple={champion} size="md" />
-            <div className="text-left text-sm text-silver-300">
-              <div className="font-medium text-silver-100">{champion.celebrity}</div>
-              <div>&amp; {champion.professional} · Mirrorball</div>
-            </div>
-          </div>
+          <CoupleTicket couple={champion} eyebrow="Mirrorball winner" className="border-gold-400/50 shadow-glow-sm" />
         </div>
       )}
 
@@ -70,33 +64,32 @@ export default async function StandingsPage() {
             const best = bestRemaining(active);
             const isMe = row.user_id === ctx.user.id;
             const podium = row.podium_rank <= 3;
+            const s = slot(row.user_id);
             return (
               <li key={row.user_id}>
                 <details className={`glass glass-hover group ${isMe ? "border-gold-400/40" : ""}`}>
                   <summary className="flex cursor-pointer list-none items-center gap-3 p-3.5">
                     <div
                       className={`display flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${
-                        podium
-                          ? "bg-gradient-to-b from-gold-300 to-gold-600 text-plum-950 shadow-[0_0_18px_-4px_rgb(233_194_80/0.9)]"
-                          : "border hairline bg-plum-950/60 text-silver-300"
+                        podium ? "bg-gradient-to-b from-gold-300 to-gold-600 text-plum-950 shadow-[0_0_18px_-4px_rgb(233_194_80/.9)]" : "border hairline bg-plum-950/60 text-silver-300"
                       }`}
                     >
                       {row.podium_rank}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 font-semibold text-silver-100">
-                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${colorOf(row.user_id)}`} />
+                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${OWNER_BG[s % OWNER_BG.length]}`} />
                         <span className="truncate">{row.display_name}</span>
                         {isMe && <span className="rounded-full bg-gold-400/15 px-1.5 text-[10px] text-gold-300">you</span>}
                         {row.is_grand_champion && <Crown size={14} className="text-gold-300" />}
                       </div>
-                      <div className="mt-0.5 flex items-center gap-2 truncate text-xs text-silver-500">
+                      <div className="mt-1 flex items-center gap-2 truncate text-xs text-silver-500">
                         <span className="flex -space-x-2">
                           {active.slice(0, 4).map((c) => (
-                            <CoupleAvatar key={c.id} couple={c} size="sm" className="ring-plum-950" />
+                            <CoupleFace key={c.id} couple={c} size={26} />
                           ))}
                         </span>
-                        <span>
+                        <span className="truncate">
                           {row.active_couples} dancing{best && <> · best: {best.celebrity}</>}
                         </span>
                       </div>
@@ -111,7 +104,7 @@ export default async function StandingsPage() {
                     <ul className="space-y-2">
                       {[...active, ...out].map((c) => (
                         <li key={c.id}>
-                          <CoupleCard couple={c} compact />
+                          <CoupleRow couple={c} owner={s} note={null} />
                         </li>
                       ))}
                     </ul>
@@ -124,8 +117,7 @@ export default async function StandingsPage() {
       )}
 
       <p className="mt-8 text-center text-xs text-silver-500">
-        1 point per week a couple survives on your roster. Tiebreaks: couples still dancing, best placement, earlier draft slot.
-        Week {current} is next.
+        1 point per week a couple survives on your roster. Tiebreaks: couples still dancing, best placement, earlier draft slot. Week {current} is next.
       </p>
     </Shell>
   );

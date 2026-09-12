@@ -9,7 +9,7 @@ import type { League, Profile } from "@/lib/league";
 import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 import { OWNER_BG, OWNER_BORDER } from "@/lib/colors";
 import type { Couple, DraftPick } from "@/lib/types";
-import { CoupleAvatar } from "@/components/couple-avatar";
+import { CoupleMarquee, CoupleRow, CoupleTicket, CoupleTile } from "@/components/couple";
 import { makePick, serverNow } from "@/app/draft/actions";
 
 type Props = {
@@ -198,27 +198,19 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
             <Search size={16} className="pointer-events-none absolute left-3 top-3 text-silver-500" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search couples" className="input-dark pl-9" />
           </div>
-          <ul className="stagger mt-3 space-y-2">
+          <ul className={`stagger mt-3 grid grid-cols-2 gap-2.5 ${myTurn ? "" : "opacity-75"}`}>
             {filtered.map((c) => (
               <li key={c.id}>
-                <button
+                <CoupleMarquee
+                  couple={c}
+                  href={null}
+                  corner={<span />}
                   onClick={() => myTurn && setConfirm(c)}
                   disabled={!myTurn || pending}
-                  className={`glass flex w-full items-center gap-3 p-3 text-left transition-all ${
-                    myTurn ? "glass-hover cursor-pointer hover:border-gold-400/70" : "cursor-default opacity-70"
-                  }`}
-                >
-                  <CoupleAvatar couple={c} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold text-silver-100">{c.celebrity}</div>
-                    <div className="truncate text-xs text-silver-300">with {c.professional}</div>
-                    <div className="truncate text-xs text-silver-500">{c.notability}</div>
-                  </div>
-                  <span className="text-xs text-silver-500">#{c.cast_order}</span>
-                </button>
+                />
               </li>
             ))}
-            {filtered.length === 0 && <li className="py-8 text-center text-silver-500">No couples match.</li>}
+            {filtered.length === 0 && <li className="col-span-2 py-8 text-center text-silver-500">No couples match.</li>}
           </ul>
         </section>
 
@@ -249,35 +241,23 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
                       const isNow = cell.pickNo === pickNo && league.draft_status === "live";
                       const justIn = c && flash === c.id;
                       return (
-                        <td
-                          key={uid}
-                          className={`h-[62px] rounded-lg border p-1.5 align-top transition-all ${
-                            isNow
-                              ? "border-gold-400 bg-gold-400/15 shadow-glow-sm"
-                              : p
-                                ? `${justIn ? "fade-up border-gold-300" : "border-plum-600/60"} bg-plum-900/70`
-                                : "border-plum-700/40 bg-plum-950/30"
-                          }`}
-                        >
-                          <div className="flex items-start gap-1.5">
-                            {c && <CoupleAvatar couple={c} size="sm" />}
-                            <div className="min-w-0">
-                              <div className="text-[10px] text-silver-500">#{cell.pickNo}</div>
-                              {c ? (
-                                <>
-                                  <div className="truncate font-semibold text-silver-100">{c.celebrity}</div>
-                                  <div className="truncate text-silver-500">
-                                    {c.professional.split(" ")[0]}
-                                    {p?.auto && " · auto"}
-                                  </div>
-                                </>
-                              ) : isNow ? (
-                                <div className="flex items-center gap-1 text-gold-300">
+                        <td key={uid} className="p-0 align-top">
+                          {c ? (
+                            <CoupleTile couple={c} pickNo={cell.pickNo} auto={p?.auto} className={justIn ? "fade-up ring-1 ring-gold-300" : ""} />
+                          ) : (
+                            <span
+                              className={`relative block h-[74px] rounded-[10px] border p-1.5 transition-all ${
+                                isNow ? "border-gold-400 bg-gold-400/15 shadow-glow-sm" : "border-plum-700/40 bg-plum-950/30"
+                              }`}
+                            >
+                              <span className="text-[10px] text-silver-500">#{cell.pickNo}</span>
+                              {isNow && (
+                                <span className="absolute inset-x-2 bottom-1.5 flex items-center gap-1 text-[11px] font-semibold text-gold-300">
                                   <Zap size={11} /> on the clock
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
+                                </span>
+                              )}
+                            </span>
+                          )}
                         </td>
                       );
                     })}
@@ -295,16 +275,18 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
             {myPicks.map((p) => {
               const c = coupleById.get(p.couple_id);
               return (
-                <li key={p.id} className="glass flex items-center gap-3 p-3">
-                  {c && <CoupleAvatar couple={c} size="md" />}
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold text-silver-100">{c?.celebrity}</div>
-                    <div className="truncate text-xs text-silver-500">
-                      with {c?.professional} · Rd {p.round}, #{p.pick_no}
-                      {p.auto && " · auto"}
-                    </div>
-                  </div>
-                </li>
+                c && (
+                  <li key={p.id}>
+                    <CoupleRow
+                      couple={c}
+                      owner={slot(teamOf)}
+                      href={null}
+                      disabled
+                      note={`Round ${p.round} · pick #${p.pick_no}${p.auto ? " · auto" : ""}`}
+                      right={<span className="text-silver-500">#{c.cast_order}</span>}
+                    />
+                  </li>
+                )
               );
             })}
             {Array.from({ length: Math.max(0, league.roster_size - myPicks.length) }).map((_, i) => (
@@ -333,20 +315,14 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
       {/* Confirm modal */}
       {confirm && (
         <div className="fixed inset-0 z-30 flex items-end justify-center bg-plum-950/80 p-4 backdrop-blur-sm sm:items-center" onClick={() => !pending && setConfirm(null)}>
-          <div className="glass fade-up w-full max-w-sm border-gold-400/40 p-5 shadow-glow" onClick={(e) => e.stopPropagation()}>
-            <div className="eyebrow">
-              Round {roundOf(pickNo, order.length)} · Pick {pickNo}
-              {actingAs && actingAs !== me && ` · for ${nameOf(actingAs)}`}
-            </div>
-            <div className="mt-3 flex items-center gap-4">
-              <CoupleAvatar couple={confirm} size="lg" />
-              <div className="min-w-0">
-                <div className="display text-2xl font-semibold leading-tight text-silver-100">{confirm.celebrity}</div>
-                <div className="text-sm text-silver-300">with {confirm.professional}</div>
-                <div className="mt-0.5 text-xs text-silver-500">{confirm.notability}</div>
-              </div>
-            </div>
-            <div className="mt-5 flex gap-2">
+          <div className="fade-up w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <CoupleTicket
+              couple={confirm}
+              className="border-gold-400/50 shadow-glow"
+              eyebrow={`Round ${roundOf(pickNo, order.length)} · Pick ${pickNo}${actingAs && actingAs !== me ? ` · for ${nameOf(actingAs)}` : ""}`}
+              foot={<span className="text-xs text-silver-500">Cast #{confirm.cast_order} · confirm to lock this pick</span>}
+            />
+            <div className="mt-3 flex gap-2">
               <button onClick={() => setConfirm(null)} disabled={pending} className="btn-ghost flex-1">
                 <X size={16} /> Cancel
               </button>
