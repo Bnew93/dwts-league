@@ -244,7 +244,14 @@ h1, h2.display, .display { font-family: var(--font-display); }
   position: absolute; left: 0; right: 0; bottom: -6px; height: 110px; pointer-events: none; overflow: hidden; opacity: 0.28;
   mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.7), transparent 90%); -webkit-mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.7), transparent 90%);
 }
-.lobby-scrim { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(60% 60% at 50% 48%, rgb(14 7 22 / 0.92) 0%, rgb(14 7 22 / 0.75) 40%, transparent 75%); }
+.lobby-scrim { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(64% 74% at 50% 50%, rgb(14 7 22 / 0.94) 0%, rgb(14 7 22 / 0.8) 45%, transparent 78%); }
+@media (max-height: 820px) and (min-width: 641px) { .lobby { --lane: 150px; } .lobby-poster { opacity: 0.8; } }
+/* phones: the center column is tall, so the lanes sit behind it — dim them and widen the scrim */
+@media (max-width: 640px) {
+  .lobby-scrim { background: linear-gradient(180deg, rgb(14 7 22 / 0.35) 0%, rgb(14 7 22 / 0.9) 18%, rgb(14 7 22 / 0.94) 82%, rgb(14 7 22 / 0.35) 100%); }
+  .lobby-poster { opacity: 0.55; }
+  .lobby-reflect { display: none; }
+}
 .lobby-digit {
   display: block; min-width: 2ch; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-weight: 700; font-size: clamp(40px, 9vw, 80px); line-height: 1;
   letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--color-gold-200);
@@ -255,7 +262,7 @@ h1, h2.display, .display { font-family: var(--font-display); }
 }
 .lobby-colon { font-family: ui-monospace, monospace; font-size: clamp(32px, 7vw, 60px); color: rgb(233 194 80 / 0.5); padding-top: 18px; animation: lobby-blink 1s steps(2) infinite; }
 @keyframes lobby-blink { 50% { opacity: 0.2; } }
-@media (max-width: 640px) { .lobby { --lane: 150px; } }
+@media (max-width: 640px) { .lobby { --lane: 120px; } }
 @media (prefers-reduced-motion: reduce) { .lobby-lane, .lobby-spot, .lobby-colon { animation: none !important; } }
 
 /* ---------------------------------------------------------------------------

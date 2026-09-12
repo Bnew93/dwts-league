@@ -167,7 +167,7 @@ export default async function AdminPage() {
 
         {/* Members */}
         <section className="glass p-4">
-          <SectionTitle right={`${members.length} of ${allowlist.length} signed in`}>Members</SectionTitle>
+          <SectionTitle right={`${allowlist.filter((a) => a.user_id).length} of ${allowlist.length} signed in`}>Members</SectionTitle>
           <ul className="divide-y divide-gold-400/10 text-sm">
             {allowlist.map((a) => (
               <li key={a.email} className="flex items-center justify-between gap-3 py-2.5">
@@ -206,8 +206,8 @@ export default async function AdminPage() {
           <form action={saveCast}>
             <ul className="divide-y divide-gold-400/10">
               {cast.map((c) => (
-                <li key={c.id} className="grid gap-2 py-3 sm:grid-cols-[auto_1fr] sm:items-center">
-                  <div className="flex items-center gap-3">
+                <li key={c.id} className="grid min-w-0 gap-2 py-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+                  <div className="flex min-w-0 items-center gap-3">
                     <input name={`order:${c.id}`} type="number" min={1} defaultValue={c.cast_order} disabled={!pending} className="input-dark w-16 px-2 py-1 text-center" />
                     <CoupleFace couple={c} size={40} ring="ring-gold-400/50" />
                     <div className="min-w-0 sm:w-48">
@@ -215,7 +215,7 @@ export default async function AdminPage() {
                       <div className="truncate text-xs text-silver-500">with {c.professional}</div>
                     </div>
                   </div>
-                  <input name={`photo:${c.id}`} defaultValue={c.image_url ?? ""} placeholder="Couple photo URL (https)" className="input-dark px-2 py-1 text-xs" />
+                  <input name={`photo:${c.id}`} defaultValue={c.image_url ?? ""} placeholder="Couple photo URL (https)" className="input-dark min-w-0 px-2 py-1 text-xs" size={10} />
                 </li>
               ))}
             </ul>

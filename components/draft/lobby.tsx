@@ -22,7 +22,8 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [league, setLeague] = useState(initial);
-  const [now, setNow] = useState(() => Date.now());
+  // null until mounted: the countdown depends on the client clock, so it must not be server-rendered
+  const [now, setNow] = useState<number | null>(null);
   const [skew, setSkew] = useState(0);
   const [online, setOnline] = useState<Set<string>>(new Set([me]));
   const [pending, start] = useTransition();
@@ -30,6 +31,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
 
   // clock
   useEffect(() => {
+    setNow(Date.now());
     serverNow()
       .then((s) => setSkew(s - Date.now()))
       .catch(() => {});
@@ -59,13 +61,13 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
   }, [league.draft_status, router]);
 
   const target = league.draft_scheduled_at ? new Date(league.draft_scheduled_at).getTime() : null;
-  const ms = target ? Math.max(0, target - (now + skew)) : null;
+  const ms = target && now != null ? Math.max(0, target - (now + skew)) : null;
   const late = target != null && ms === 0;
   const d = ms != null ? Math.floor(ms / 864e5) : 0;
   const h = ms != null ? Math.floor((ms % 864e5) / 36e5) : 0;
   const m = ms != null ? Math.floor((ms % 36e5) / 6e4) : 0;
   const s = ms != null ? Math.floor((ms % 6e4) / 1e3) : 0;
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const pad = (n: number) => (ms == null ? "––" : String(n).padStart(2, "0"));
 
   const humans = members.filter((x) => !x.is_mock);
   const hereCount = humans.filter((x) => online.has(x.id)).length;
@@ -92,7 +94,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
       <div className="lobby-spot right-[5%] [animation-direction:alternate-reverse] [animation-duration:13s]" aria-hidden />
 
       {/* poster lanes */}
-      <div className="pointer-events-none absolute inset-0 grid content-between py-16 sm:py-[70px]" aria-hidden>
+      <div className="pointer-events-none absolute inset-0 grid content-between py-2 sm:py-[70px]" aria-hidden>
         <Lane items={laneA} dir="left" />
         <Lane items={laneB} dir="right" />
       </div>
@@ -102,9 +104,9 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
       <div className="lobby-scrim" aria-hidden />
 
       {/* center stage */}
-      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-53px)] max-w-3xl content-center justify-items-center px-5 py-14 text-center">
+      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-53px)] max-w-3xl content-center justify-items-center px-5 py-10 pb-24 text-center sm:py-14">
         <div className="eyebrow">Season {league.season} · Draft night</div>
-        <h1 className="display mt-2 text-[clamp(38px,7vw,68px)] font-semibold italic leading-none tracking-tight text-silver-100">
+        <h1 className="display mt-2 text-[clamp(32px,7vw,68px)] font-semibold italic leading-none tracking-tight text-silver-100 [text-wrap:balance]">
           {late ? "It's draft time" : target ? "The ballroom opens in" : "Draft night is coming"}
         </h1>
         <div className="mt-2 text-[15px] text-silver-300">

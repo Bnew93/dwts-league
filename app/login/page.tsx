@@ -1,5 +1,6 @@
 import { GoogleButton } from "./google-button";
 import { Mirrorball } from "@/components/mirrorball";
+import { DevLogin } from "./dev-login";
 
 const ERRORS: Record<string, string> = {
   not_in_league: "That Google account isn't in this league. Ask the commissioner to add your email.",
@@ -23,6 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="glass mt-10 w-full p-5 fade-up" style={{ animationDelay: "240ms" }}>
         <GoogleButton />
         <p className="mt-3 text-xs text-silver-500">League members only. Tuesdays 8/7c on ABC.</p>
+        {process.env.NODE_ENV === "development" && <DevLogin />}
       </div>
       {error && (
         <p className="fade-up mt-5 rounded-lg border border-rose-500/40 bg-rose-950/50 px-4 py-3 text-sm text-rose-100">{ERRORS[error] ?? ERRORS.auth}</p>

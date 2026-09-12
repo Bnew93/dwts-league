@@ -119,11 +119,11 @@ function GroupRows({ label, color, rows }: { label: string; color: string; rows:
       {rows.map((r) => (
         <tr key={r.couple.id} className="group">
           <td className="sticky left-0 z-10 bg-plum-900/95 pl-2 pr-3 backdrop-blur">
-            <Link href={`/couples/${r.couple.id}`} className="flex max-w-[230px] items-center gap-2 py-0.5 hover:underline">
+            <Link href={`/couples/${r.couple.id}`} className="flex w-[132px] items-center gap-2 py-0.5 hover:underline sm:w-[230px]">
               <CoupleFace couple={r.couple} size={30} ring={r.alive ? "ring-gold-400/50" : "ring-silver-500/30"} />
               <span className={`truncate ${r.alive ? "text-silver-100" : "text-silver-500"}`}>
                 {r.couple.celebrity}
-                <span className="text-silver-500/70"> · {r.couple.professional.split(" ")[0]}</span>
+                <span className="hidden text-silver-500/70 sm:inline"> · {r.couple.professional.split(" ")[0]}</span>
               </span>
             </Link>
           </td>

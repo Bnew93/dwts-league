@@ -35,6 +35,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   const [flash, setFlash] = useState<string | null>(null); // couple id just drafted
   const [pending, startTransition] = useTransition();
   const [tick, setTick] = useState(0);
+  const [mounted, setMounted] = useState(false); // the clock is client-only; never server-render it
   const skew = useRef(0);
   const lastPickCount = useRef(initialPicks.length);
 
@@ -75,6 +76,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   }, [supabase, league.id, refetch]);
 
   useEffect(() => {
+    setMounted(true);
     serverNow()
       .then((s) => (skew.current = s - Date.now()))
       .catch(() => {});
@@ -96,8 +98,8 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   const actingAs = onClock && (onClock === me || (canProxy && isProxy(onClock))) ? onClock : null;
   const myTurn = actingAs !== null;
   const teamOf = actingAs && actingAs !== me ? actingAs : me;
-  const left = secondsLeft(league.turn_started_at, league.pick_seconds, Date.now() + skew.current);
-  const urgent = left <= 10;
+  const left = mounted ? secondsLeft(league.turn_started_at, league.pick_seconds, Date.now() + skew.current) : league.pick_seconds;
+  const urgent = mounted && left <= 10;
   void tick;
 
   const takenIds = useMemo(() => new Set(picks.map((p) => p.couple_id)), [picks]);
@@ -157,7 +159,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
             }`}
           >
             <Timer size={18} />
-            {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
+            {mounted ? `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}` : "–:––"}
           </div>
         </div>
         <div className="mt-2.5 flex gap-1.5 overflow-x-auto text-xs">

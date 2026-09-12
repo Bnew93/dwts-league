@@ -49,19 +49,13 @@ export async function getCtx(): Promise<Ctx> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, display_name, avatar_url, role, is_mock, last_reveal_key")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile, error: profileErr }, { data: membership, error: memberErr }] = await Promise.all([
+    supabase.from("profiles").select("id, display_name, avatar_url, role, is_mock, last_reveal_key").eq("id", user.id).maybeSingle(),
+    supabase.from("league_members").select("league_id").eq("user_id", user.id).limit(1).maybeSingle(),
+  ]);
 
-  const { data: membership } = await supabase
-    .from("league_members")
-    .select("league_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
+  // A transient query failure must not sign anyone out; only a confirmed "no membership" does.
+  if (profileErr || memberErr) throw new Error(`league lookup failed: ${(profileErr ?? memberErr)!.message}`);
   if (!profile || !membership) {
     await supabase.auth.signOut();
     redirect("/login?error=not_in_league");
