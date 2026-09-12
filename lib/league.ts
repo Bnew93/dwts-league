@@ -8,6 +8,7 @@ export type Profile = {
   avatar_url: string | null;
   role: "commissioner" | "member";
   is_mock: boolean;
+  last_reveal_key?: string | null;
 };
 
 export type League = {
@@ -50,7 +51,7 @@ export async function getCtx(): Promise<Ctx> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role, is_mock")
+    .select("id, display_name, avatar_url, role, is_mock, last_reveal_key")
     .eq("id", user.id)
     .single();
 

@@ -1,9 +1,11 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import type { Ctx } from "@/lib/league";
+import { getPendingReveal } from "@/lib/reveal";
 import { Nav, type NavItem } from "./nav";
+import { EliminationReveal } from "./elimination-reveal";
 
-export function Shell({
+export async function Shell({
   ctx,
   children,
   wide = false,
@@ -28,8 +30,11 @@ export function Shell({
 
   const Wrap = fill ? "div" : Fragment;
   const wrapProps = fill ? { className: "flex h-dvh flex-col overflow-hidden" } : {};
+  // Once-per-elimination reveal (skipped in the live draft room, which has its own overlay).
+  const reveal = fill ? null : await getPendingReveal(ctx);
   return (
     <Wrap {...wrapProps}>
+      {reveal && <EliminationReveal reveal={reveal} me={ctx.user.id} />}
       <Nav items={items} leagueName={league.name} displayName={profile.display_name} avatarUrl={profile.avatar_url} />
       {league.is_mock && (
         <div className="bg-gold-400/15 px-4 py-1.5 text-center text-xs text-gold-200">
