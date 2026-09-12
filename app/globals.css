@@ -225,8 +225,12 @@ h1, h2.display, .display { font-family: var(--font-display); }
   animation: lobby-sweep 11s ease-in-out infinite alternate;
 }
 @keyframes lobby-sweep { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+/* top lane travels right→left (normal), bottom lane left→right (reverse) */
 .lobby-lane { display: flex; gap: 18px; width: max-content; will-change: transform; animation: lobby-drift 70s linear infinite; }
+.lobby-lane-rev { animation-direction: reverse; animation-duration: 85s; }
+.lobby-lane-reflect { transform-origin: center; filter: blur(1.5px); animation-name: lobby-drift-reflect; }
 @keyframes lobby-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes lobby-drift-reflect { from { transform: translateX(0) scaleY(-1); } to { transform: translateX(-50%) scaleY(-1); } }
 .lobby-poster {
   margin: 0; position: relative; width: calc(var(--lane) * 0.75); height: var(--lane); flex: 0 0 auto; border-radius: 14px; overflow: hidden;
   border: 1px solid rgb(233 194 80 / 0.25); box-shadow: 0 20px 40px -20px rgb(0 0 0 / 0.9), 0 0 0 1px rgb(14 7 22 / 0.4);

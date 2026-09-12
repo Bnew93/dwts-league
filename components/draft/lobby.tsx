@@ -206,7 +206,7 @@ function Colon() {
 function Lane({ items, dir, reflect = false }: { items: Couple[]; dir: "left" | "right"; reflect?: boolean }) {
   const all = [...items, ...items];
   return (
-    <div className={`lobby-lane ${dir === "right" ? "[animation-direction:reverse] [animation-duration:85s]" : ""} ${reflect ? "scale-y-[-1] blur-[1.5px]" : ""}`}>
+    <div className={`lobby-lane ${dir === "right" ? "lobby-lane-rev" : ""} ${reflect ? "lobby-lane-reflect" : ""}`}>
       {all.map((c, i) => (
         <figure key={`${c.id}-${i}`} className={`lobby-poster ${i % 2 ? "mt-3.5 rotate-[1.1deg]" : "-rotate-[1.2deg]"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}

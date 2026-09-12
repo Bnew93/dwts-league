@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCtx } from "@/lib/league";
 import { createClient } from "@/lib/supabase/server";
-import { Shell, SectionTitle } from "@/components/shell";
-import { CoupleMarquee } from "@/components/couple";
+import { Shell } from "@/components/shell";
 import { DraftRoom } from "@/components/draft/draft-room";
 import { Lobby } from "@/components/draft/lobby";
 import type { Couple, DraftPick } from "@/lib/types";
@@ -24,16 +23,6 @@ export default async function DraftPage() {
     return (
       <Shell ctx={ctx} bare>
         <Lobby league={league} members={members} me={ctx.user.id} isCommissioner={isCommissioner} couples={(couples ?? []) as Couple[]} />
-        <section className="mx-auto max-w-5xl px-4 pb-10 pt-10">
-          <SectionTitle right={`${couples?.length ?? 0} couples`}>The cast</SectionTitle>
-          <ul className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {((couples ?? []) as Couple[]).map((c) => (
-              <li key={c.id}>
-                <CoupleMarquee couple={c} corner={<span />} />
-              </li>
-            ))}
-          </ul>
-        </section>
       </Shell>
     );
   }
