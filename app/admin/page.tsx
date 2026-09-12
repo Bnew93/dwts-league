@@ -11,6 +11,8 @@ import {
   saveCastOrder,
   startDraft,
   resetDraft,
+  startMockDraft,
+  endMockDraft,
 } from "./actions";
 
 const input =
@@ -62,31 +64,62 @@ export default async function AdminPage() {
               : "Not enough active couples for this roster size."}
           </p>
         )}
+        {league.is_mock && (
+          <p className="mt-3 rounded-md border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
+            Mock draft in progress. You pick for the proxies in the Draft Room. When you&apos;re done,
+            end the mock to remove the proxies and all picks.
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap gap-3">
-          {pending && (
-            <form action={startDraft}>
-              <button className={btn} disabled={!canStart}>
-                Start Draft
-              </button>
-            </form>
-          )}
-          {league.draft_status === "live" && (
+          {pending && !league.is_mock && (
             <>
-              <a href="/draft" className={btn}>
-                Open Draft Room
-              </a>
-              <form action={resetDraft}>
-                <button className="rounded-md border border-red-800 px-4 py-2 text-red-300">
-                  Reset draft (dry run only)
+              <form action={startDraft}>
+                <button className={btn} disabled={!canStart}>
+                  Start Draft
+                </button>
+              </form>
+              <form action={startMockDraft}>
+                <button className="rounded-md border border-amber-600 px-4 py-2 font-medium text-amber-200">
+                  Start mock draft
                 </button>
               </form>
             </>
           )}
+          {league.draft_status === "live" && (
+            <a href="/draft" className={btn}>
+              Open Draft Room
+            </a>
+          )}
+          {league.draft_status === "live" && !league.is_mock && (
+            <form action={resetDraft}>
+              <button className="rounded-md border border-red-800 px-4 py-2 text-red-300">
+                Reset draft (dry run only)
+              </button>
+            </form>
+          )}
+          {league.is_mock && (
+            <form action={endMockDraft}>
+              <button className="rounded-md border border-red-800 px-4 py-2 text-red-300">
+                End mock draft &amp; clean up
+              </button>
+            </form>
+          )}
         </div>
+        {pending && !league.is_mock && (
+          <p className="mt-2 text-xs text-zinc-500">
+            Mock draft adds proxy members to reach 4, lets you pick for them with the real timer, and is fully
+            reversible.
+          </p>
+        )}
         {league.draft_order && (
           <ol className="mt-4 list-decimal space-y-1 pl-6 text-sm">
             {league.draft_order.map((id) => (
-              <li key={id}>{members.find((m) => m.id === id)?.display_name ?? id}</li>
+              <li key={id}>
+                {members.find((m) => m.id === id)?.display_name ?? id}
+                {members.find((m) => m.id === id)?.is_mock && (
+                  <span className="ml-1 text-xs text-amber-400">proxy</span>
+                )}
+              </li>
             ))}
           </ol>
         )}

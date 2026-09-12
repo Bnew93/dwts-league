@@ -62,6 +62,7 @@ export default async function DraftPage() {
         league={league}
         members={members}
         me={ctx.user.id}
+        isCommissioner={isCommissioner}
         initialCouples={(couples ?? []) as Couple[]}
         initialPicks={(picks ?? []) as DraftPick[]}
       />

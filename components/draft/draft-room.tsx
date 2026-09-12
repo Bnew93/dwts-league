@@ -6,6 +6,7 @@ import { Search, Timer, Check, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { buildBoard, pickOwner, roundOf, secondsLeft, leftoverCount } from "@/lib/draft";
 import type { League, Profile } from "@/lib/league";
+import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 import type { Couple, DraftPick } from "@/lib/types";
 import { makePick, serverNow } from "@/app/draft/actions";
 
@@ -13,6 +14,7 @@ type Props = {
   league: League;
   members: Profile[];
   me: string;
+  isCommissioner: boolean;
   initialCouples: Couple[];
   initialPicks: DraftPick[];
 };
@@ -21,7 +23,7 @@ type Tab = "available" | "board" | "team";
 
 const OWNER_COLORS = ["bg-sky-500", "bg-rose-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500", "bg-teal-500"];
 
-export function DraftRoom({ league: initialLeague, members, me, initialCouples, initialPicks }: Props) {
+export function DraftRoom({ league: initialLeague, members, me, isCommissioner, initialCouples, initialPicks }: Props) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [league, setLeague] = useState(initialLeague);
@@ -47,7 +49,7 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
     const [l, c, p] = await Promise.all([
       supabase
         .from("leagues")
-        .select("id, name, season, roster_size, pick_seconds, draft_status, draft_order, draft_rng_seed, current_pick, turn_started_at, season_complete")
+        .select(LEAGUE_COLUMNS)
         .eq("id", league.id)
         .single(),
       supabase.from("couples").select("*").eq("league_id", league.id).order("cast_order"),
@@ -88,7 +90,12 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
   const pickNo = league.current_pick + 1;
   const totalPicks = league.roster_size * order.length;
   const onClock = order.length ? pickOwner(order, pickNo) : null;
-  const myTurn = onClock === me;
+  // Mock mode: the commissioner picks on behalf of proxy members.
+  const isProxy = (id: string) => members.find((m) => m.id === id)?.is_mock === true;
+  const canProxy = isCommissioner && league.is_mock;
+  const actingAs = onClock && (onClock === me || (canProxy && isProxy(onClock))) ? onClock : null;
+  const myTurn = actingAs !== null;
+  const teamOf = actingAs && actingAs !== me ? actingAs : me;
   const left = secondsLeft(league.turn_started_at, league.pick_seconds, Date.now() + skew.current);
   void tick;
 
@@ -99,7 +106,7 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
     const q = query.trim().toLowerCase();
     return !q || `${c.celebrity} ${c.professional} ${c.notability ?? ""}`.toLowerCase().includes(q);
   });
-  const myPicks = picks.filter((p) => p.user_id === me);
+  const myPicks = picks.filter((p) => p.user_id === teamOf);
   const board = buildBoard(order, league.roster_size);
   const pickAt = (n: number) => picks.find((p) => p.pick_no === n);
   const leftovers = leftoverCount(available.length + takenIds.size, order.length, league.roster_size);
@@ -109,7 +116,7 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
   // ---- actions -------------------------------------------------------------
   function submitPick(c: Couple) {
     startTransition(async () => {
-      const res = await makePick(c.id);
+      const res = await makePick(c.id, actingAs && actingAs !== me ? actingAs : undefined);
       setConfirm(null);
       if (!res.ok) {
         setToast(res.error);
@@ -134,8 +141,15 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
               Pick {pickNo} of {totalPicks} · Round {roundOf(pickNo, order.length)}
             </div>
             <div className="truncate text-lg font-semibold">
-              {myTurn ? "You're on the clock" : `${onClock ? nameOf(onClock) : "—"} is picking`}
+              {actingAs === me
+                ? "You're on the clock"
+                : actingAs
+                  ? `Pick for ${nameOf(actingAs)}`
+                  : `${onClock ? nameOf(onClock) : "—"} is picking`}
             </div>
+            {league.is_mock && (
+              <div className="text-xs text-amber-300">Mock draft · you control the proxies</div>
+            )}
           </div>
           <div
             className={`flex items-center gap-1 rounded-lg px-3 py-1.5 font-mono text-2xl tabular-nums ${
@@ -272,7 +286,9 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
 
         {/* My team + leftovers */}
         <section className={tab === "team" ? "" : "hidden sm:block"}>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">My team</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+            {teamOf === me ? "My team" : `${nameOf(teamOf)}'s team`}
+          </h2>
           <ul className="mt-3 space-y-2">
             {myPicks.map((p) => {
               const c = coupleById.get(p.couple_id);
@@ -315,7 +331,10 @@ export function DraftRoom({ league: initialLeague, members, me, initialCouples, 
       {confirm && (
         <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
           <div className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5">
-            <div className="text-xs uppercase tracking-wide text-zinc-400">Round {roundOf(pickNo, order.length)} · Pick {pickNo}</div>
+            <div className="text-xs uppercase tracking-wide text-zinc-400">
+              Round {roundOf(pickNo, order.length)} · Pick {pickNo}
+              {actingAs && actingAs !== me && ` · for ${nameOf(actingAs)}`}
+            </div>
             <div className="mt-1 text-xl font-semibold">{confirm.celebrity}</div>
             <div className="text-sm text-zinc-400">with {confirm.professional}</div>
             <div className="mt-1 text-xs text-zinc-500">{confirm.notability}</div>

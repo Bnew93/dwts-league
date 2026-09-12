@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 
 export type Profile = {
   id: string;
   display_name: string;
   avatar_url: string | null;
   role: "commissioner" | "member";
+  is_mock: boolean;
 };
 
 export type League = {
@@ -20,7 +22,10 @@ export type League = {
   current_pick: number;
   turn_started_at: string | null;
   season_complete: boolean;
+  is_mock: boolean;
 };
+
+export { LEAGUE_COLUMNS };
 
 export type Ctx = {
   user: { id: string; email: string | null };
@@ -44,7 +49,7 @@ export async function getCtx(): Promise<Ctx> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, role")
+    .select("id, display_name, avatar_url, role, is_mock")
     .eq("id", user.id)
     .single();
 
@@ -62,16 +67,14 @@ export async function getCtx(): Promise<Ctx> {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select(
-      "id, name, season, roster_size, pick_seconds, draft_status, draft_order, draft_rng_seed, current_pick, turn_started_at, season_complete",
-    )
+    .select(LEAGUE_COLUMNS)
     .eq("id", membership.league_id)
     .single();
   if (!league) redirect("/login?error=not_in_league");
 
   const { data: memberRows } = await supabase
     .from("league_members")
-    .select("profiles(id, display_name, avatar_url, role)")
+    .select("profiles(id, display_name, avatar_url, role, is_mock)")
     .eq("league_id", league.id);
 
   const members = (memberRows ?? [])

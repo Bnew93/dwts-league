@@ -79,6 +79,26 @@ export async function startDraft(): Promise<void> {
   redirect("/draft");
 }
 
+/** Mock draft: adds proxy members up to 4, starts the draft; commissioner picks for proxies. */
+export async function startMockDraft(): Promise<void> {
+  const ctx = await requireCommissioner();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_start_mock_draft", { p_league_id: ctx.league.id, p_total: 4 });
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  redirect("/draft");
+}
+
+/** Ends the mock: wipes picks and roster events, removes proxies, draft back to pending. */
+export async function endMockDraft(): Promise<void> {
+  const ctx = await requireCommissioner();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_end_mock_draft", { p_league_id: ctx.league.id });
+  if (error) throw new Error(error.message);
+  revalidatePath("/", "layout");
+  redirect("/admin");
+}
+
 export async function resetDraft(): Promise<void> {
   const ctx = await requireCommissioner();
   const supabase = await createClient();

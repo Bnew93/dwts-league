@@ -7,15 +7,20 @@ import { getCtx } from "@/lib/league";
 
 export type PickResult = { ok: true; pickNo: number } | { ok: false; error: string };
 
-/** Commit a draft pick. All validation (turn, availability, atomicity) lives in fn_make_pick. */
-export async function makePick(coupleId: string): Promise<PickResult> {
+/**
+ * Commit a draft pick. All validation (turn, availability, atomicity) lives in fn_make_pick.
+ * `asUserId` lets the commissioner pick for a proxy during a mock draft; the DB enforces that.
+ */
+export async function makePick(coupleId: string, asUserId?: string): Promise<PickResult> {
   const id = z.string().uuid().safeParse(coupleId);
   if (!id.success) return { ok: false, error: "bad couple id" };
+  const as = asUserId ? z.string().uuid().safeParse(asUserId) : null;
+  if (as && !as.success) return { ok: false, error: "bad user id" };
   const ctx = await getCtx();
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_make_pick", {
     p_league_id: ctx.league.id,
-    p_user_id: ctx.user.id,
+    p_user_id: as?.success ? as.data : ctx.user.id,
     p_couple_id: id.data,
   });
   if (error) return { ok: false, error: friendly(error.message) };
