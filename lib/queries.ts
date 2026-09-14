@@ -6,7 +6,7 @@ export type RosterEvent = {
   league_id: string;
   user_id: string;
   couple_id: string;
-  event: "drafted" | "replacement" | "eliminated" | "withdrew";
+  event: "drafted" | "replacement" | "eliminated" | "withdrew" | "departed";
   week: number;
   source: "draft" | "claim" | "ingest" | "admin";
   created_at: string;
@@ -14,6 +14,7 @@ export type RosterEvent = {
 
 export type Episode = {
   id: string;
+  show_id: string;
   season: number;
   week: number;
   air_date: string;
@@ -47,19 +48,40 @@ export type Claim = {
   resolved_at: string | null;
 };
 
-/** Everything the season views need, in one round of parallel queries. */
-export async function loadSeason(leagueId: string, season: number) {
+export type SeasonKey = { id: string; season: number; show_id: string };
+
+/** The season's shared show data (couples, episodes) — the same for every league in the season. */
+export async function loadShow(show_id: string, season: number) {
   const supabase = await createClient();
-  const [couples, events, episodes, standings, claims, scores] = await Promise.all([
-    supabase.from("couples").select("*").eq("league_id", leagueId).order("cast_order"),
-    supabase.from("roster_events").select("*").eq("league_id", leagueId).order("created_at"),
-    supabase.from("episodes").select("*").eq("season", season).order("week").order("air_time"),
-    supabase.from("v_standings").select("*").eq("league_id", leagueId).order("podium_rank"),
-    supabase.from("replacement_claims").select("*").eq("league_id", leagueId).order("queue_pos"),
-    supabase.from("judge_scores").select("couple_id, week, total"),
+  const [couples, episodes] = await Promise.all([
+    supabase.from("couples").select("*").eq("show_id", show_id).eq("season", season).order("cast_order"),
+    supabase.from("episodes").select("*").eq("show_id", show_id).eq("season", season).order("week").order("air_time"),
   ]);
+  return { couples: (couples.data ?? []) as Couple[], episodes: (episodes.data ?? []) as Episode[] };
+}
+
+/** Everything the season views need for one league, in one round of parallel queries. */
+export async function loadSeason(league: SeasonKey) {
+  const supabase = await createClient();
+  const [couples, events, episodes, standings, claims] = await Promise.all([
+    supabase.from("couples").select("*").eq("show_id", league.show_id).eq("season", league.season).order("cast_order"),
+    supabase.from("roster_events").select("*").eq("league_id", league.id).order("created_at"),
+    supabase.from("episodes").select("*").eq("show_id", league.show_id).eq("season", league.season).order("week").order("air_time"),
+    supabase.from("v_standings").select("*").eq("league_id", league.id).order("podium_rank"),
+    supabase.from("replacement_claims").select("*").eq("league_id", league.id).order("queue_pos"),
+  ]);
+  const coupleRows = (couples.data ?? []) as Couple[];
+  const scores = coupleRows.length
+    ? await supabase
+        .from("judge_scores")
+        .select("couple_id, week, total")
+        .in(
+          "couple_id",
+          coupleRows.map((c) => c.id),
+        )
+    : { data: [] };
   return {
-    couples: (couples.data ?? []) as Couple[],
+    couples: coupleRows,
     events: (events.data ?? []) as RosterEvent[],
     episodes: (episodes.data ?? []) as Episode[],
     standings: (standings.data ?? []) as StandingRow[],

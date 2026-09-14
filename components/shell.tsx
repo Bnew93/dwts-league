@@ -1,11 +1,16 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import type { Ctx } from "@/lib/league";
+import type { Ctx, UserCtx } from "@/lib/league";
 import { getPendingReveal } from "@/lib/reveal";
-import { Nav, type NavItem } from "./nav";
+import { Nav, type NavItem, type NavLeague } from "./nav";
 import { EliminationReveal } from "./elimination-reveal";
 import { FinaleReveal } from "./finale-reveal";
 
+function navLeagues(u: UserCtx): NavLeague[] {
+  return u.memberships.map((m) => ({ slug: m.league.slug, name: m.league.name, status: m.league.status }));
+}
+
+/** Chrome for league pages (/l/[slug]/*). */
 export async function Shell({
   ctx,
   children,
@@ -21,13 +26,15 @@ export async function Shell({
   /** lock the page to the viewport; children manage their own scrolling */
   fill?: boolean;
 }) {
-  const { league, profile, isCommissioner, isPlayer } = ctx;
+  const { league, profile, isCommissioner, isPlayer, isPlatformAdmin } = ctx;
+  const base = `/l/${league.slug}`;
   const items: NavItem[] = [];
-  if (league.draft_status !== "complete") items.push({ href: "/draft", label: "Draft", icon: "draft" });
-  items.push({ href: "/standings", label: "Standings", icon: "standings" });
-  if (isPlayer) items.push({ href: "/team", label: "My Team", icon: "team" });
-  items.push({ href: "/bracket", label: "Bracket", icon: "bracket" });
-  if (isCommissioner) items.push({ href: "/admin", label: "Admin", icon: "admin" });
+  if (league.status === "setup" || league.status === "drafting") items.push({ href: `${base}/draft`, label: "Draft", icon: "draft" });
+  items.push({ href: base, label: "Standings", icon: "standings", exact: true });
+  if (isPlayer) items.push({ href: `${base}/team`, label: "My Team", icon: "team" });
+  items.push({ href: `${base}/bracket`, label: "Bracket", icon: "bracket" });
+  if (isCommissioner) items.push({ href: `${base}/commissioner`, label: "Commissioner", icon: "commissioner" });
+  if (isPlatformAdmin) items.push({ href: "/admin", label: "Admin", icon: "admin", desktopOnly: true });
 
   const Wrap = fill ? "div" : Fragment;
   const wrapProps = fill ? { className: "flex h-dvh flex-col overflow-hidden" } : {};
@@ -35,17 +42,23 @@ export async function Shell({
   const reveal = fill ? null : await getPendingReveal(ctx);
   return (
     <Wrap {...wrapProps}>
-      {reveal?.type === "finale" && <FinaleReveal reveal={reveal} me={ctx.user.id} />}
-      {reveal?.type === "elimination" && <EliminationReveal reveal={reveal} me={ctx.user.id} />}
-      <Nav items={items} leagueName={league.name} displayName={profile.display_name} avatarUrl={profile.avatar_url} />
+      {reveal?.type === "finale" && <FinaleReveal reveal={reveal} me={ctx.user.id} leagueId={league.id} />}
+      {reveal?.type === "elimination" && <EliminationReveal reveal={reveal} me={ctx.user.id} leagueId={league.id} />}
+      <Nav
+        items={items}
+        league={{ slug: league.slug, name: league.name, status: league.status }}
+        leagues={navLeagues(ctx)}
+        displayName={profile.display_name}
+        avatarUrl={profile.avatar_url}
+      />
       {league.is_mock && (
         <div className="bg-gold-400/15 px-4 py-1.5 text-center text-xs text-gold-200">
           Mock draft mode · nothing here counts.
           {isCommissioner && (
             <>
               {" "}
-              <Link href="/admin" className="underline decoration-gold-400/60 hover:text-gold-100">
-                End it in Admin
+              <Link href={`${base}/commissioner?tab=draft`} className="underline decoration-gold-400/60 hover:text-gold-100">
+                End it in Commissioner
               </Link>
             </>
           )}
@@ -63,6 +76,18 @@ export async function Shell({
         {children}
       </main>
     </Wrap>
+  );
+}
+
+/** Chrome for pages outside a league (/leagues, /account, /admin). */
+export function UserShell({ u, children, wide = false, items = [] }: { u: UserCtx; children: React.ReactNode; wide?: boolean; items?: NavItem[] }) {
+  const nav: NavItem[] = [...items];
+  if (u.isPlatformAdmin && !nav.some((i) => i.href === "/admin")) nav.push({ href: "/admin", label: "Admin", icon: "admin", desktopOnly: true });
+  return (
+    <>
+      <Nav items={nav} league={null} leagues={navLeagues(u)} displayName={u.profile.display_name} avatarUrl={u.profile.avatar_url} />
+      <main className={`mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>
+    </>
   );
 }
 

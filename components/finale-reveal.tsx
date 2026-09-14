@@ -14,7 +14,7 @@ import { OWNER_BG, OWNER_TEXT } from "@/lib/colors";
  *   1  podium rises                (1.2 – 5.2s)
  *   2  champion + confetti         (5.2s →)
  */
-export function FinaleReveal({ reveal, me }: { reveal: Data; me: string }) {
+export function FinaleReveal({ reveal, me, leagueId }: { reveal: Data; me: string; leagueId: string }) {
   const [open, setOpen] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const [phase, setPhase] = useState(0);
@@ -31,7 +31,7 @@ export function FinaleReveal({ reveal, me }: { reveal: Data; me: string }) {
   function close() {
     if (leaving) return;
     setLeaving(true);
-    void markRevealSeen(reveal.key);
+    void markRevealSeen(leagueId, reveal.key);
     setTimeout(() => setOpen(false), 650);
   }
 

@@ -9,7 +9,7 @@ import { markRevealSeen } from "@/app/actions";
  * Once-per-elimination overlay: lights down, the couple's poster in a spotlight,
  * an "Eliminated · Week N" stamp, and whose roster took the hit.
  */
-export function EliminationReveal({ reveal, me }: { reveal: Data; me: string }) {
+export function EliminationReveal({ reveal, me, leagueId }: { reveal: Data; me: string; leagueId: string }) {
   const [open, setOpen] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const multi = reveal.couples.length > 1;
@@ -18,7 +18,7 @@ export function EliminationReveal({ reveal, me }: { reveal: Data; me: string }) 
   function close() {
     if (leaving) return;
     setLeaving(true);
-    void markRevealSeen(reveal.key);
+    void markRevealSeen(leagueId, reveal.key);
     setTimeout(() => setOpen(false), 650);
   }
 

@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
-import { BRAND, TAGLINE } from "@/lib/brand";
+import { BRAND, TAGLINE, SHOW_SHORT } from "@/lib/brand";
+import { appHost } from "@/lib/url";
 import { mirrorballDataUri } from "@/lib/mirrorball";
 
 export const runtime = "edge";
@@ -51,13 +52,13 @@ export default async function OpengraphImage() {
 
         {/* copy */}
         <div style={{ position: "absolute", left: 420, top: 150, right: 70, display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 22, letterSpacing: 6, color: "#e9c250", fontWeight: 700 }}>SEASON 35 · FANTASY LEAGUE</div>
+          <div style={{ fontSize: 22, letterSpacing: 6, color: "#e9c250", fontWeight: 700 }}>{`${SHOW_SHORT} · FANTASY LEAGUE`}</div>
           <div style={{ marginTop: 18, fontFamily: display ? "Playfair" : "serif", fontStyle: "italic", fontSize: 88, lineHeight: 1.0, color: "#f3f2f7", display: "flex", flexDirection: "column" }}>
-            <span>Drafting on the</span>
-            <span style={{ color: "#f5d97a" }}>Dance Floor</span>
+            <span>{BRAND.split(" ")[0]}</span>
+            <span style={{ color: "#f5d97a" }}>{BRAND.split(" ").slice(1).join(" ")}</span>
           </div>
           <div style={{ marginTop: 26, fontSize: 26, color: "#d8d6e0" }}>{TAGLINE}</div>
-          <div style={{ marginTop: 34, fontSize: 20, color: "#a7a4b3", letterSpacing: 1 }}>dwts-league.vercel.app</div>
+          <div style={{ marginTop: 34, fontSize: 20, color: "#a7a4b3", letterSpacing: 1 }}>{appHost()}</div>
         </div>
       </div>
     ),

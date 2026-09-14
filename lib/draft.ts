@@ -42,3 +42,9 @@ export function secondsLeft(turnStartedAt: string | null, pickSeconds: number, n
 export function leftoverCount(coupleCount: number, users: number, rosterSize: number): number {
   return Math.max(0, coupleCount - users * rosterSize);
 }
+
+/** Roster math shared by the wizard and the commissioner page: floor(couples / players), remainder to Leftovers. */
+export function rosterMath(coupleCount: number, players: number) {
+  const p = Math.max(1, players);
+  return { rosterSize: Math.floor(coupleCount / p), leftovers: coupleCount % p };
+}

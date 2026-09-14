@@ -2,12 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { StageBackdrop } from "@/components/stage-backdrop";
-import { BRAND, TAGLINE } from "@/lib/brand";
+import { BRAND, TAGLINE, SHOW_NAME } from "@/lib/brand";
+import { appUrl } from "@/lib/url";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap", style: ["normal", "italic"] });
 
-const SITE = "https://dwts-league.vercel.app";
+const SITE = appUrl();
+const DESCRIPTION = `${SHOW_NAME} fantasy league. ${TAGLINE}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -19,12 +21,12 @@ export const metadata: Metadata = {
     url: SITE,
     siteName: BRAND,
     title: BRAND,
-    description: `Season 35 fantasy league. ${TAGLINE}`,
+    description: DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
     title: BRAND,
-    description: `Season 35 fantasy league. ${TAGLINE}`,
+    description: DESCRIPTION,
   },
 };
 

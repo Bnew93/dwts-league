@@ -20,28 +20,30 @@ export type FinaleReveal = {
 export type Reveal = EliminationReveal | FinaleReveal;
 
 /**
- * What the user hasn't been shown yet: the finale (once the season is complete), else the
- * latest elimination week. Keys are '<season>:<week>' and '<season>:final'; the finale key is terminal.
+ * What the user hasn't been shown yet in this league: the finale (once the season is complete),
+ * else the latest elimination week. Keys are '<season>:<week>' and '<season>:final'; the finale
+ * key is terminal. The cursor lives on league_members, one per league.
  */
 export async function getPendingReveal(ctx: Ctx): Promise<Reveal | null> {
   const supabase = await createClient();
-  const seen = ctx.profile.last_reveal_key ?? null;
+  const seen = ctx.membership.last_reveal_key ?? null;
+  const { league } = ctx;
 
-  if (ctx.league.season_complete) {
-    const key = `${ctx.league.season}:final`;
+  if (league.status === "complete") {
+    const key = `${league.season}:final`;
     if (seen === key) return null;
     const [{ data: standings }, { data: winner }] = await Promise.all([
-      supabase.from("v_standings").select("*").eq("league_id", ctx.league.id).order("podium_rank"),
-      supabase.from("couples").select("*").eq("league_id", ctx.league.id).eq("placement", 1).maybeSingle(),
+      supabase.from("v_standings").select("*").eq("league_id", league.id).order("podium_rank"),
+      supabase.from("couples").select("*").eq("show_id", league.show_id).eq("season", league.season).eq("placement", 1).maybeSingle(),
     ]);
     const rows = (standings ?? []) as StandingRow[];
-    const slotOf = (uid: string) => Math.max(0, ctx.league.draft_order?.indexOf(uid) ?? 0);
+    const slotOf = (uid: string) => Math.max(0, league.draft_order?.indexOf(uid) ?? 0);
     let champion: FinaleReveal["champion"] = null;
     if (winner) {
       const { data: ev } = await supabase
         .from("roster_events")
         .select("user_id, event, created_at")
-        .eq("league_id", ctx.league.id)
+        .eq("league_id", league.id)
         .eq("couple_id", winner.id)
         .in("event", ["drafted", "replacement"])
         .order("created_at", { ascending: false })
@@ -57,10 +59,13 @@ export async function getPendingReveal(ctx: Ctx): Promise<Reveal | null> {
     };
   }
 
+  if (league.status !== "active") return null;
+
   const { data: latest } = await supabase
     .from("couples")
     .select("elimination_week")
-    .eq("league_id", ctx.league.id)
+    .eq("show_id", league.show_id)
+    .eq("season", league.season)
     .in("status", ["eliminated", "withdrew"])
     .not("elimination_week", "is", null)
     .order("elimination_week", { ascending: false })
@@ -68,13 +73,14 @@ export async function getPendingReveal(ctx: Ctx): Promise<Reveal | null> {
     .maybeSingle();
   const week = latest?.elimination_week as number | undefined;
   if (!week) return null;
-  const key = `${ctx.league.season}:${week}`;
+  const key = `${league.season}:${week}`;
   if (seen === key) return null;
 
   const { data: couples } = await supabase
     .from("couples")
     .select("*")
-    .eq("league_id", ctx.league.id)
+    .eq("show_id", league.show_id)
+    .eq("season", league.season)
     .in("status", ["eliminated", "withdrew"])
     .eq("elimination_week", week)
     .order("placement", { ascending: false });
@@ -84,7 +90,7 @@ export async function getPendingReveal(ctx: Ctx): Promise<Reveal | null> {
   const { data: events } = await supabase
     .from("roster_events")
     .select("couple_id, user_id, event")
-    .eq("league_id", ctx.league.id)
+    .eq("league_id", league.id)
     .in("event", ["eliminated", "withdrew"])
     .in(
       "couple_id",

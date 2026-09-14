@@ -9,7 +9,7 @@ import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 import { OWNER_BG, OWNER_BORDER } from "@/lib/colors";
 import type { Couple, DraftPick } from "@/lib/types";
 import { CoupleMarquee, CoupleRow, CoupleTicket, CoupleTile } from "@/components/couple";
-import { makePick, serverNow } from "@/app/draft/actions";
+import { makePick, serverNow } from "@/app/l/[slug]/draft/actions";
 import { DraftWrap } from "./draft-wrap";
 
 type Props = {
@@ -46,7 +46,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   const refetch = useCallback(async () => {
     const [l, c, p] = await Promise.all([
       supabase.from("leagues").select(LEAGUE_COLUMNS).eq("id", league.id).single(),
-      supabase.from("couples").select("*").eq("league_id", league.id).order("cast_order"),
+      supabase.from("couples").select("*").eq("show_id", league.show_id).eq("season", league.season).order("cast_order"),
       supabase.from("draft_picks").select("*").eq("league_id", league.id).order("pick_no"),
     ]);
     if (l.data) setLeague(l.data as League);
@@ -60,7 +60,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
       lastPickCount.current = next.length;
       setPicks(next);
     }
-  }, [supabase, league.id]);
+  }, [supabase, league.id, league.show_id, league.season]);
 
   useEffect(() => {
     const channel = supabase
@@ -87,8 +87,8 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   // Final pick → curtain call, then the wrap routes to standings itself.
   const [wrap, setWrap] = useState(false);
   useEffect(() => {
-    if (league.draft_status === "complete") setWrap(true);
-  }, [league.draft_status]);
+    if (league.status === "active") setWrap(true);
+  }, [league.status]);
 
   const pickNo = league.current_pick + 1;
   const totalPicks = league.roster_size * order.length;
@@ -118,7 +118,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
 
   function submitPick(c: Couple) {
     startTransition(async () => {
-      const res = await makePick(c.id, actingAs && actingAs !== me ? actingAs : undefined);
+      const res = await makePick(league.id, c.id, actingAs && actingAs !== me ? actingAs : undefined);
       setConfirm(null);
       if (!res.ok) {
         setToast(res.error);
@@ -130,7 +130,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
 
   return (
     <div className="mx-auto flex h-full max-w-6xl flex-col sm:px-4 sm:pt-4">
-      {wrap && <DraftWrap order={order} members={members} picks={picks} couples={couples} />}
+      {wrap && <DraftWrap slug={league.slug} season={league.season} order={order} members={members} picks={picks} couples={couples} />}
       {/* On the clock */}
       <div
         className={`z-10 shrink-0 border-b px-4 py-3 backdrop-blur-md transition-colors sm:rounded-2xl sm:border ${
@@ -241,7 +241,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
                     const cell = row.find((c) => c.userId === uid)!;
                     const p = pickAt(cell.pickNo);
                     const c = p ? coupleById.get(p.couple_id) : undefined;
-                    const isNow = cell.pickNo === pickNo && league.draft_status === "live";
+                    const isNow = cell.pickNo === pickNo && league.status === "drafting";
                     const justIn = c && flash === c.id;
                     return c ? (
                       <CoupleTile key={uid} couple={c} pickNo={cell.pickNo} auto={p?.auto} className={`min-w-0 ${justIn ? "fade-up ring-1 ring-gold-300" : ""}`} />

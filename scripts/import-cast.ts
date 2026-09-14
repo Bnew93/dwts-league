@@ -1,6 +1,7 @@
 /**
  * One-time cast import (Phase 1). Parses the season page (live or a fixture)
- * and upserts couples for the league with status 'active'.
+ * and upserts the season's couples with status 'active'. Couples are shared show
+ * data keyed by (show_id, season, celebrity_key) — no league involved.
  *
  *   npx tsx scripts/import-cast.ts --sql [--fixture fixtures/s35-preseason.html]
  *   npm run import-cast            (needs SUPABASE_SERVICE_ROLE_KEY)
@@ -13,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { parseSeasonPage } from "../lib/wiki/parse";
 
+const SHOW_ID = process.env.SHOW_ID ?? "dwts";
 const SEASON = Number(process.env.SEASON ?? 35);
 const PAGE = process.env.WIKI_SEASON_PAGE ?? "Dancing_with_the_Stars_(American_TV_series)_season_35";
 
@@ -38,17 +40,14 @@ async function main() {
 
   if (process.argv.includes("--sql")) {
     const vals = couples
-      .map(
-        (c) =>
-          `((select id from public.leagues where season = ${SEASON} limit 1), ${SEASON}, ${q(c.celebrity)}, ${q(c.celebrityKey)}, ${q(c.professional)}, ${q(c.notability)}, ${c.castOrder})`,
-      )
+      .map((c) => `(${q(SHOW_ID)}, ${SEASON}, ${q(c.celebrity)}, ${q(c.celebrityKey)}, ${q(c.professional)}, ${q(c.notability)}, ${c.castOrder})`)
       .join(",\n  ");
-    console.log(`insert into public.couples (league_id, season, celebrity, celebrity_key, professional, notability, cast_order) values
+    console.log(`insert into public.couples (show_id, season, celebrity, celebrity_key, professional, notability, cast_order) values
   ${vals}
-on conflict (league_id, celebrity_key) do update
+on conflict (show_id, season, celebrity_key) do update
   set celebrity = excluded.celebrity, professional = excluded.professional,
       notability = excluded.notability, cast_order = excluded.cast_order, updated_at = now();
-select count(*) as couples from public.couples where season = ${SEASON};`);
+select count(*) as couples from public.couples where show_id = ${q(SHOW_ID)} and season = ${SEASON};`);
     return;
   }
 
@@ -56,11 +55,9 @@ select count(*) as couples from public.couples where season = ${SEASON};`);
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY missing (or use --sql)");
   const sb = createClient(url, key, { auth: { persistSession: false } });
-  const { data: league, error } = await sb.from("leagues").select("id").eq("season", SEASON).limit(1).single();
-  if (error) throw error;
   const up = await sb.from("couples").upsert(
     couples.map((c) => ({
-      league_id: league.id,
+      show_id: SHOW_ID,
       season: SEASON,
       celebrity: c.celebrity,
       celebrity_key: c.celebrityKey,
@@ -68,7 +65,7 @@ select count(*) as couples from public.couples where season = ${SEASON};`);
       notability: c.notability,
       cast_order: c.castOrder,
     })),
-    { onConflict: "league_id,celebrity_key" },
+    { onConflict: "show_id,season,celebrity_key" },
   );
   if (up.error) throw up.error;
   console.log(`Upserted ${couples.length} couples for season ${SEASON}`);

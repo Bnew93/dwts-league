@@ -1,93 +1,107 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
-import { fromZonedTime } from "date-fns-tz";
 import { createClient } from "@/lib/supabase/server";
-import { getCtx } from "@/lib/league";
+import { getUser } from "@/lib/league";
+import { logActivity } from "@/lib/activity";
 
-async function requireCommissioner() {
-  const ctx = await getCtx();
-  if (!ctx.isCommissioner) throw new Error("commissioner only");
-  return ctx;
+const uuid = z.string().uuid();
+
+async function requireAdmin() {
+  const u = await getUser();
+  if (!u.isPlatformAdmin) throw new Error("platform admin only");
+  return u;
 }
 
-const settingsSchema = z.object({
-  name: z.string().trim().min(1).max(60),
-  roster_size: z.coerce.number().int().min(1).max(10),
-  pick_seconds: z.coerce.number().int().min(15).max(600),
+async function rpc(fn: string, args: Record<string, unknown>) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function airDateFor(season: number, week: number): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("episodes").select("air_date").eq("season", season).eq("week", week).order("air_date", { ascending: false }).limit(1).maybeSingle();
+  return data?.air_date ?? null;
+}
+
+const markSchema = z.object({
+  couple_id: uuid,
+  season: z.coerce.number().int(),
+  status: z.enum(["eliminated", "withdrew"]),
+  week: z.coerce.number().int().min(1),
+  placement: z
+    .union([z.literal(""), z.coerce.number().int().min(1)])
+    .optional()
+    .transform((v) => (v === "" || v == null ? null : v)),
 });
 
-export async function saveSettings(formData: FormData): Promise<void> {
-  const ctx = await requireCommissioner();
-  if (ctx.league.draft_status !== "pending") throw new Error("settings are locked once the draft starts");
-  const s = settingsSchema.parse(Object.fromEntries(formData));
-  const supabase = await createClient();
-  const { error } = await supabase.from("leagues").update(s).eq("id", ctx.league.id);
-  if (error) throw new Error(error.message);
+/** Official result: mark a couple eliminated/withdrew in week N. Fans out to every league (audited). */
+export async function markOut(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const m = markSchema.parse(Object.fromEntries(formData));
+  await rpc("fn_admin_set_couple_status", {
+    p_couple_id: m.couple_id,
+    p_status: m.status,
+    p_elimination_week: m.week,
+    p_elimination_date: await airDateFor(m.season, m.week),
+    p_placement: m.placement,
+  });
   revalidatePath("/", "layout");
 }
 
-const scheduleSchema = z.object({
-  // datetime-local value, interpreted in Eastern time
-  scheduled: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).or(z.literal("")),
-});
+const placeSchema = z.object({ couple_id: uuid, season: z.coerce.number().int(), placement: z.coerce.number().int().min(1), week: z.coerce.number().int().min(1) });
 
-/** Estimated draft start (Eastern). Display only; the room opens on commissioner confirmation. */
-export async function saveSchedule(formData: FormData): Promise<void> {
-  const ctx = await requireCommissioner();
-  const { scheduled } = scheduleSchema.parse(Object.fromEntries(formData));
-  const iso = scheduled ? fromZonedTime(scheduled, "America/New_York").toISOString() : null;
-  const supabase = await createClient();
-  const { error } = await supabase.from("leagues").update({ draft_scheduled_at: iso }).eq("id", ctx.league.id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-  const back = formData.get("back");
-  if (typeof back === "string" && back.startsWith("/")) redirect(back);
-}
-
-const emailSchema = z.object({
-  email: z.string().trim().toLowerCase().email(),
-  display_name: z.string().trim().max(40).optional().transform((v) => v || null),
-  is_player: z.union([z.literal("on"), z.undefined()]).transform((v) => v === "on"),
-});
-
-export async function addAllowedEmail(formData: FormData): Promise<void> {
-  const ctx = await requireCommissioner();
-  const { email, display_name, is_player } = emailSchema.parse(Object.fromEntries(formData));
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("allowed_emails")
-    .upsert({ email, display_name, league_id: ctx.league.id, is_commissioner: false, is_player }, { onConflict: "email" });
-  if (error) throw new Error(error.message);
-  revalidatePath("/admin");
-}
-
-/** Toggle whether a member drafts a team. Only while the draft is pending. */
-export async function setPlayer(formData: FormData): Promise<void> {
-  const ctx = await requireCommissioner();
-  if (ctx.league.draft_status !== "pending") throw new Error("locked once the draft starts");
-  const email = z.string().email().parse(formData.get("email"));
-  const is_player = formData.get("is_player") === "true";
-  const supabase = await createClient();
-  const { data: row, error } = await supabase.from("allowed_emails").update({ is_player }).eq("email", email).select("user_id").single();
-  if (error) throw new Error(error.message);
-  if (row?.user_id) {
-    const { error: e2 } = await supabase.from("league_members").update({ is_player }).eq("user_id", row.user_id).eq("league_id", ctx.league.id);
-    if (e2) throw new Error(e2.message);
-  }
+/** Finale: give a remaining couple its final placement (status finalist; 1 = the Mirrorball). */
+export async function setPlacement(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const m = placeSchema.parse(Object.fromEntries(formData));
+  await rpc("fn_admin_set_couple_status", {
+    p_couple_id: m.couple_id,
+    p_status: "finalist",
+    p_elimination_week: m.week,
+    p_elimination_date: await airDateFor(m.season, m.week),
+    p_placement: m.placement,
+  });
   revalidatePath("/", "layout");
 }
 
-export async function removeAllowedEmail(formData: FormData): Promise<void> {
-  const ctx = await requireCommissioner();
-  const email = z.string().email().parse(formData.get("email"));
-  if (email.toLowerCase() === ctx.user.email?.toLowerCase()) throw new Error("cannot remove yourself");
-  const supabase = await createClient();
-  const { error } = await supabase.from("allowed_emails").delete().eq("email", email);
-  if (error) throw new Error(error.message);
-  revalidatePath("/admin");
+/** Undo: back to active; elimination ledger rows removed in every league; open claims voided. */
+export async function undoResult(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const couple_id = uuid.parse(formData.get("couple_id"));
+  await rpc("fn_admin_set_couple_status", { p_couple_id: couple_id, p_status: "active", p_elimination_week: null, p_elimination_date: null, p_placement: null });
+  revalidatePath("/", "layout");
+}
+
+export async function applyIngestRun(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await rpc("fn_admin_force_ingest_apply", { p_run_id: uuid.parse(formData.get("run_id")) });
+  revalidatePath("/", "layout");
+}
+
+export async function dismissIngestRun(formData: FormData): Promise<void> {
+  await requireAdmin();
+  await rpc("fn_admin_dismiss_ingest_run", { p_run_id: uuid.parse(formData.get("run_id")) });
+  revalidatePath("/admin/ingest");
+}
+
+export async function adminRevokeInvite(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const leagueId = uuid.parse(formData.get("league_id"));
+  await rpc("fn_admin_revoke_invite", { p_league_id: leagueId });
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
+
+export async function setUserDisabled(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = uuid.parse(formData.get("user_id"));
+  const disabled = formData.get("disabled") === "true";
+  await rpc("fn_admin_set_user_disabled", { p_user_id: userId, p_disabled: disabled });
+  await logActivity("admin.user_disabled", null, { user_id: userId, disabled });
+  revalidatePath("/admin", "layout");
 }
 
 const urlOrNull = z
@@ -96,62 +110,30 @@ const urlOrNull = z
   .transform((v) => (v === "" ? null : v))
   .pipe(z.union([z.null(), z.string().url().startsWith("https://")]));
 
-/** Cast editor: cast_order (only while pending) and photo URLs (any time). */
+/** Cast editor: cast_order and photo URL, one audited call per changed couple. */
 export async function saveCast(formData: FormData): Promise<void> {
-  const ctx = await requireCommissioner();
-  const supabase = await createClient();
-  const pending = ctx.league.draft_status === "pending";
+  await requireAdmin();
   const rows = new Map<string, { cast_order?: number; image_url?: string | null }>();
   const row = (id: string) => rows.get(id) ?? rows.set(id, {}).get(id)!;
   for (const [k, v] of formData.entries()) {
     const m = /^(order|photo):(.+)$/.exec(k);
     if (!m) continue;
-    if (m[1] === "order") {
-      if (pending) row(m[2]).cast_order = z.coerce.number().int().min(1).parse(v);
-    } else row(m[2]).image_url = urlOrNull.parse(v);
+    if (m[1] === "order") row(m[2]).cast_order = z.coerce.number().int().min(1).parse(v);
+    else row(m[2]).image_url = urlOrNull.parse(v);
   }
-  for (const [id, patch] of rows) {
-    if (Object.keys(patch).length === 0) continue;
-    const { error } = await supabase.from("couples").update(patch).eq("id", id).eq("league_id", ctx.league.id);
-    if (error) throw new Error(error.message);
+  const supabase = await createClient();
+  const { data: current } = await supabase.from("couples").select("id, cast_order, image_url").in("id", [...rows.keys()]);
+  for (const c of current ?? []) {
+    const patch = rows.get(c.id)!;
+    const orderChanged = patch.cast_order !== undefined && patch.cast_order !== c.cast_order;
+    const photoChanged = patch.image_url !== undefined && patch.image_url !== c.image_url;
+    if (!orderChanged && !photoChanged) continue;
+    await rpc("fn_admin_update_couple", {
+      p_couple_id: c.id,
+      p_cast_order: orderChanged ? patch.cast_order : null,
+      p_image_url: photoChanged && patch.image_url ? patch.image_url : null,
+      p_clear_image: photoChanged && patch.image_url === null,
+    });
   }
   revalidatePath("/", "layout");
-}
-
-export async function startDraft(): Promise<void> {
-  const ctx = await requireCommissioner();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_start_draft", { p_league_id: ctx.league.id });
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-  redirect("/draft");
-}
-
-/** Mock draft: adds proxy members up to 4, starts the draft; commissioner picks for proxies. */
-export async function startMockDraft(): Promise<void> {
-  const ctx = await requireCommissioner();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_start_mock_draft", { p_league_id: ctx.league.id, p_total: 4 });
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-  redirect("/draft");
-}
-
-/** Ends the mock: wipes picks and roster events, removes proxies, draft back to pending. */
-export async function endMockDraft(): Promise<void> {
-  const ctx = await requireCommissioner();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_end_mock_draft", { p_league_id: ctx.league.id });
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-  redirect("/admin");
-}
-
-export async function resetDraft(): Promise<void> {
-  const ctx = await requireCommissioner();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_reset_draft", { p_league_id: ctx.league.id });
-  if (error) throw new Error(error.message);
-  revalidatePath("/", "layout");
-  redirect("/admin");
 }

@@ -1,7 +1,0 @@
-[
-  { "email": "billnewhart19@gmail.com", "display_name": "Bill", "commissioner": true, "player": false },
-  { "email": "petaktara@gmail.com", "display_name": null, "commissioner": false, "player": true },
-  { "email": "tessapetak@gmail.com", "display_name": "Tess Petak", "commissioner": false, "player": true },
-  { "email": "joelledenisirdn@gmail.com", "display_name": "Joelle DeNisi", "commissioner": false, "player": true },
-  { "email": "denisikatelyn@gmail.com", "display_name": "Katelyn DeNisi", "commissioner": false, "player": true }
-]

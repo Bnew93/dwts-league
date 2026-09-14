@@ -9,8 +9,8 @@ import type { League, Member as Profile } from "@/lib/league";
 import { LEAGUE_COLUMNS } from "@/lib/league-columns";
 import { OWNER_BG } from "@/lib/colors";
 import type { Couple } from "@/lib/types";
-import { serverNow } from "@/app/draft/actions";
-import { startDraft } from "@/app/admin/actions";
+import { serverNow } from "@/app/l/[slug]/draft/actions";
+import { StartDraftButton } from "@/components/draft/start-draft-button";
 
 type Props = { league: League; members: Profile[]; me: string; isCommissioner: boolean; couples: Couple[] };
 
@@ -26,8 +26,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
   const [now, setNow] = useState<number | null>(null);
   const [skew, setSkew] = useState(0);
   const [online, setOnline] = useState<Set<string>>(new Set([me]));
-  const [pending, start] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
+  const [, start] = useTransition();
 
   // clock
   useEffect(() => {
@@ -39,7 +38,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
     return () => clearInterval(t);
   }, []);
 
-  // league changes (schedule edits, the room opening) + presence
+  // league changes (schedule edits, the room opening), seat changes, presence
   useEffect(() => {
     const ch = supabase
       .channel(`league:${league.id}:lobby`, { config: { presence: { key: me } } })
@@ -47,6 +46,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
         const { data } = await supabase.from("leagues").select(LEAGUE_COLUMNS).eq("id", league.id).single();
         if (data) setLeague(data as League);
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "league_members", filter: `league_id=eq.${league.id}` }, () => start(() => router.refresh()))
       .on("presence", { event: "sync" }, () => setOnline(new Set(Object.keys(ch.presenceState()))))
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") await ch.track({ at: Date.now() });
@@ -54,11 +54,11 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [supabase, league.id, me]);
+  }, [supabase, league.id, me, router]);
 
   useEffect(() => {
-    if (league.draft_status !== "pending") router.refresh();
-  }, [league.draft_status, router]);
+    if (league.status !== "setup") router.refresh();
+  }, [league.status, router]);
 
   const target = league.draft_scheduled_at ? new Date(league.draft_scheduled_at).getTime() : null;
   const ms = target && now != null ? Math.max(0, target - (now + skew)) : null;
@@ -72,21 +72,13 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
   const players = members.filter((x) => x.is_player);
   const humans = players.filter((x) => !x.is_mock);
   const hereCount = humans.filter((x) => online.has(x.id)).length;
-  const canOpen = players.length >= 2 && couples.filter((c) => c.status === "active").length >= players.length * league.roster_size;
+  const activeCouples = couples.filter((c) => c.status === "active").length;
+  const rosterSize = players.length ? Math.floor(activeCouples / players.length) : 0;
+  const canOpen = players.length >= 2 && rosterSize >= 1;
   const withPhotos = couples.filter((c) => c.image_url);
   const laneA = withPhotos.filter((_, i) => i % 2 === 0);
   const laneB = withPhotos.filter((_, i) => i % 2 === 1);
-
-  function open() {
-    setErr(null);
-    start(async () => {
-      try {
-        await startDraft();
-      } catch (e) {
-        setErr(e instanceof Error ? e.message : "Could not open the room");
-      }
-    });
-  }
+  const openSeats = Math.max(0, league.member_cap - members.length);
 
   return (
     <div className="lobby relative min-h-[calc(100dvh-53px)] overflow-hidden">
@@ -135,10 +127,10 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
 
         <div className="mt-6 flex flex-wrap justify-center gap-2 text-[12.5px] text-silver-300">
           {[
-            `${couples.length} couples`,
-            `${league.roster_size} rounds · snake`,
+            `${activeCouples} couples`,
+            `${rosterSize || league.roster_size} rounds · snake`,
             `${league.pick_seconds} seconds a pick`,
-            "Auto-pick by cast order",
+            `${members.length} of ${league.member_cap} seats`,
           ].map((t) => (
             <span key={t} className="rounded-full border hairline bg-plum-950/60 px-3 py-1.5 backdrop-blur-sm">
               {t}
@@ -156,6 +148,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
                   {p.display_name.slice(0, 1)}
                 </i>
                 {p.display_name}
+                {p.role === "commissioner" && <span className="text-[10px] uppercase tracking-wide text-gold-300">commish</span>}
                 <span className={`h-[7px] w-[7px] rounded-full ${here ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-silver-500"}`} />
               </span>
             );
@@ -170,6 +163,12 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
                 <span className={`h-[7px] w-[7px] rounded-full ${online.has(m.id) ? "bg-emerald-400 shadow-[0_0_8px_#34d399]" : "bg-silver-500"}`} />
               </span>
             ))}
+          {Array.from({ length: openSeats }).map((_, i) => (
+            <span key={`open-${i}`} className="flex items-center gap-2 rounded-full border border-dashed hairline py-1.5 pl-1.5 pr-3 text-[13px] text-silver-500">
+              <i className="inline-grid h-[26px] w-[26px] place-items-center rounded-full border border-dashed border-silver-500/40 text-xs not-italic">·</i>
+              open seat
+            </span>
+          ))}
         </div>
 
         {isCommissioner ? (
@@ -178,20 +177,29 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
               {hereCount} of {humans.length} {humans.length === 1 ? "drafter is" : "drafters are"} here. Opening randomizes the order and starts the first{" "}
               {league.pick_seconds}-second clock.
             </p>
-            <button onClick={open} disabled={pending || !canOpen} className="btn-gold mt-4 flex-col gap-0 px-7 py-3.5 text-base">
-              {pending ? "Opening…" : "Open the draft room"}
-              <small className="block text-xs font-normal opacity-80">starts the clock immediately</small>
-            </button>
+            <StartDraftButton
+              leagueId={league.id}
+              slug={league.slug}
+              players={players.length}
+              cap={league.member_cap}
+              coupleCount={activeCouples}
+              disabled={!canOpen}
+              className="btn-gold mt-4 flex-col gap-0 px-7 py-3.5 text-base"
+              label="Open the draft room"
+              sub="starts the clock immediately"
+            />
             {!canOpen && (
-              <p className="mt-2 text-xs text-gold-300">
-                {players.length < 2 ? "Need at least 2 drafting members signed in." : "Not enough active couples for this roster size."}
-              </p>
+              <p className="mt-2 text-xs text-gold-300">{players.length < 2 ? "Need at least 2 drafting members." : "Not enough active couples for this many players."}</p>
             )}
-            {err && <p className="mt-2 text-xs text-rose-300">{err}</p>}
-            <div className="mt-3">
-              <Link href="/admin#schedule" className="btn-ghost px-4 py-2 text-sm">
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <Link href={`/l/${league.slug}/commissioner?tab=settings`} className="btn-ghost px-4 py-2 text-sm">
                 {target ? "Change the start time" : "Set the start time"}
               </Link>
+              {openSeats > 0 && (
+                <Link href={`/l/${league.slug}/commissioner?tab=members`} className="btn-ghost px-4 py-2 text-sm">
+                  Invite link
+                </Link>
+              )}
             </div>
           </div>
         ) : (

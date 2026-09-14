@@ -14,23 +14,38 @@ import type { Couple, DraftPick } from "@/lib/types";
  *   1  teams fan in               (1.8 – 6.5s)
  *   2  fade to black, then route  (6.5 – 7.3s → /standings?welcome=1)
  */
-export function DraftWrap({ order, members, picks, couples }: { order: string[]; members: Profile[]; picks: DraftPick[]; couples: Couple[] }) {
+export function DraftWrap({
+  slug,
+  season,
+  order,
+  members,
+  picks,
+  couples,
+}: {
+  slug: string;
+  season: number;
+  order: string[];
+  members: Profile[];
+  picks: DraftPick[];
+  couples: Couple[];
+}) {
   const router = useRouter();
   const [phase, setPhase] = useState(0);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.display_name ?? "—";
   const byId = useMemo(() => new Map(couples.map((c) => [c.id, c])), [couples]);
+  const home = `/l/${slug}?welcome=1`;
 
   useEffect(() => {
-    router.prefetch("/standings");
+    router.prefetch(`/l/${slug}`);
     const t1 = setTimeout(() => setPhase(1), 1800);
     const t2 = setTimeout(() => setPhase(2), 6500);
-    const t3 = setTimeout(() => router.push("/standings?welcome=1"), 7300);
+    const t3 = setTimeout(() => router.push(home), 7300);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [router]);
+  }, [router, slug, home]);
 
   // deterministic confetti
   const confetti = useMemo(
@@ -84,7 +99,7 @@ export function DraftWrap({ order, members, picks, couples }: { order: string[];
         </div>
 
         <div className="wrap-title mt-5">
-          <div className="eyebrow">Season 35 · Draft night</div>
+          <div className="eyebrow">Season {season} · Draft night</div>
           <h1 className="display mt-2 text-[clamp(40px,8vw,84px)] font-semibold italic leading-none tracking-tight">
             <span className="gold-text">That&apos;s a wrap.</span>
           </h1>
@@ -125,7 +140,7 @@ export function DraftWrap({ order, members, picks, couples }: { order: string[];
           })}
         </div>
 
-        <button onClick={() => router.push("/standings?welcome=1")} className="wrap-skip mt-8 text-xs text-silver-500 underline decoration-silver-500/40 hover:text-silver-300">
+        <button onClick={() => router.push(home)} className="wrap-skip mt-8 text-xs text-silver-500 underline decoration-silver-500/40 hover:text-silver-300">
           Go to standings now
         </button>
       </div>

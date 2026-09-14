@@ -42,11 +42,17 @@ function ownerBg(owner?: number | null) {
   return owner == null || owner < 0 ? "bg-silver-500/40" : OWNER_BG[owner % OWNER_BG.length];
 }
 
+/** Couple detail lives under the league: /l/[slug]/couples/[id]. No slug → no link. */
+function coupleHref(slug: string | undefined, id: string): string | null {
+  return slug ? `/l/${slug}/couples/${id}` : null;
+}
+
 /* ---------------------------------------------------------------- A. Marquee */
 export function CoupleMarquee({
   couple,
   owner,
-  href = `/couples/${couple.id}`,
+  slug,
+  href = coupleHref(slug, couple.id),
   corner,
   onClick,
   disabled,
@@ -54,6 +60,8 @@ export function CoupleMarquee({
 }: {
   couple: Couple;
   owner?: number | null;
+  /** league slug for the detail link */
+  slug?: string;
   href?: string | null;
   /** top-right slot; defaults to the status chip */
   corner?: React.ReactNode;
@@ -99,7 +107,8 @@ export function CoupleMarquee({
 export function CoupleRow({
   couple,
   owner,
-  href = `/couples/${couple.id}`,
+  slug,
+  href = coupleHref(slug, couple.id),
   right,
   note,
   onClick,
@@ -108,6 +117,8 @@ export function CoupleRow({
 }: {
   couple: Couple;
   owner?: number | null;
+  /** league slug for the detail link */
+  slug?: string;
   href?: string | null;
   /** right column; defaults to the status chip */
   right?: React.ReactNode;
