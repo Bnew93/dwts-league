@@ -1,0 +1,28 @@
+# Daily authenticated request so the free Supabase project never idles for 7 days mid-season
+# (PHASE_1_5 §8). Calls a trivial RPC through PostgREST with the publishable key.
+#
+# Required repository variables: SUPABASE_URL, SUPABASE_ANON_KEY (both are public values).
+name: keepalive
+
+on:
+  schedule:
+    - cron: "5 13 * * *" # 13:05 UTC daily
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping PostgREST
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_URL" -a -n "$SUPABASE_ANON_KEY" || { echo "SUPABASE_URL / SUPABASE_ANON_KEY variables are not set"; exit 1; }
+          code=$(curl -sS -o body.txt -w '%{http_code}' -X POST "$SUPABASE_URL/rest/v1/rpc/fn_current_season" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" -d '{"p_show_id":"dwts"}')
+          echo "HTTP $code: $(cat body.txt)"
+          test "$code" = "200"

@@ -1,0 +1,61 @@
+# Nightly data dump of the public schema (PHASE_1_5 §8). Free tier has no managed backups, so this
+# is the safety net: pg_dump via the pooler connection string, gzipped, kept as a workflow artifact
+# for 90 days. Fails loudly when the dump is empty or shrank by more than half since the last run.
+#
+# Required repository secret: SUPABASE_DB_URL  (Supabase → Project Settings → Database → Connection
+# string, "Session" pooler, with the password filled in).
+name: backup
+
+on:
+  schedule:
+    - cron: "17 8 * * *" # 08:17 UTC daily ≈ 4:17 AM ET
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install pg_dump
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Dump public schema (data only)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
+          pg_dump --data-only --schema=public --no-owner --no-privileges "$SUPABASE_DB_URL" > dump.sql
+          gzip -9 dump.sql
+          size=$(stat -c%s dump.sql.gz)
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+          echo "dump.sql.gz is $size bytes"
+          test "$size" -gt 200 || { echo "dump is empty"; exit 1; }
+        id: dump
+
+      - name: Compare with the previous dump
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIZE: ${{ steps.dump.outputs.size }}
+        run: |
+          set -euo pipefail
+          prev=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=db-dump&per_page=1" --jq '.artifacts[0].size_in_bytes // 0')
+          echo "previous=$prev current=$SIZE"
+          if [ "$prev" -gt 0 ] && [ $((SIZE * 2)) -lt "$prev" ]; then
+            echo "dump shrank by more than 50% (was $prev, now $SIZE) — refusing to treat this as a good backup"
+            exit 1
+          fi
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-dump
+          path: dump.sql.gz
+          retention-days: 90
+          if-no-files-found: error
