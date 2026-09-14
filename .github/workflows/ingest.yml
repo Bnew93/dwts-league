@@ -22,6 +22,12 @@ on:
         description: "run even if no episode aired in the last 48h"
         type: boolean
         default: false
+      fixture:
+        description: "replay a saved page instead of fetching (e.g. fixtures/s34-week4.html)"
+        default: ""
+      season:
+        description: "season number for a fixture replay (default: current)"
+        default: ""
 
 jobs:
   ingest:
@@ -46,4 +52,6 @@ jobs:
           flags=""
           [ "$INGEST_MODE" = "dry" ] && flags="$flags --dry-run"
           [ "${{ inputs.force }}" = "true" ] && flags="$flags --force"
+          [ -n "${{ inputs.fixture }}" ] && flags="$flags --fixture ${{ inputs.fixture }}"
+          [ -n "${{ inputs.season }}" ] && flags="$flags --season ${{ inputs.season }}"
           npx tsx scripts/ingest.ts $flags
