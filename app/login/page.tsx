@@ -11,8 +11,8 @@ const ERRORS: Record<string, string> = {
   not_in_league: "Sign in to create a league or follow an invite link from your commissioner.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const { error } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; start?: string }> }) {
+  const { error, start } = await searchParams;
   const [first, ...rest] = BRAND.split(" ");
   return (
     <main className="relative mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6 text-center">
@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <Mirrorball size={112} className="mx-auto drop-shadow-[0_20px_40px_rgb(233_194_80/0.35)]" />
       </div>
       <div className="stagger mt-8">
-        <div className="eyebrow">{SHOW_NAME} fantasy</div>
+        <div className="eyebrow">{start ? "Let's get you started" : `${SHOW_NAME} fantasy`}</div>
         <h1 className="display mt-2 text-[clamp(34px,9vw,52px)] font-semibold italic leading-[1.02] tracking-tight [text-wrap:balance]">
           <span className="text-silver-100">{first}</span>
           <br />
@@ -30,13 +30,19 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       </div>
       <div className="glass mt-10 w-full p-5 fade-up" style={{ animationDelay: "240ms" }}>
         <GoogleButton redirectTo={`${appUrl()}/auth/callback`} />
-        <p className="mt-3 text-xs text-silver-500">Start a league with friends, or follow the invite link they sent you.</p>
+        <p className="mt-3 text-xs text-silver-500">
+          {start ? "One tap with Google creates your account. Then start a league or join one with an invite link." : "Welcome back. Sign in to get to your leagues."}
+        </p>
         {process.env.NODE_ENV === "development" && <DevLogin />}
       </div>
       {error && (
         <p className="fade-up mt-5 rounded-lg border border-rose-500/40 bg-rose-950/50 px-4 py-3 text-sm text-rose-100">{ERRORS[error] ?? ERRORS.auth}</p>
       )}
       <p className="mt-8 text-xs text-silver-500">
+        <Link href="/" className="hover:text-silver-300">
+          About
+        </Link>
+        {" · "}
         <Link href="/legal/privacy" className="hover:text-silver-300">
           Privacy
         </Link>

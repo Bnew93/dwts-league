@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Public: login, OAuth return, invite landing, legal, and the share-card images crawlers fetch unauthenticated.
+// Public: the landing page (`/`), login, OAuth return, invite landing, legal, and the share-card images crawlers fetch unauthenticated.
 const PUBLIC_PATHS = ["/login", "/auth", "/join", "/legal", "/opengraph-image", "/twitter-image", "/icon", "/robots.txt"];
 
 /** last_seen_at is bumped at most once per 10 minutes per user; this cookie is the throttle. */
@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p));
+  const isPublic = path === "/" || PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p));
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

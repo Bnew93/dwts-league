@@ -157,9 +157,7 @@ export async function getCtx(slug: string): Promise<Ctx> {
   };
 }
 
-/** Where a signed-in user lands: their only league, the picker, or league creation. */
-export function homePathFor(memberships: Membership[]): string {
-  if (memberships.length === 1) return `/l/${memberships[0].league.slug}`;
-  if (memberships.length > 1) return "/leagues";
-  return "/leagues/new-or-join";
+/** Where a signed-in user lands after sign-in: My Leagues, always (it doubles as the create-or-join page). */
+export function homePathFor(): string {
+  return "/leagues";
 }

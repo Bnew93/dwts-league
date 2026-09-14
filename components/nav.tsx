@@ -50,7 +50,7 @@ export function Nav({
       <header className="sticky top-0 z-20 border-b hairline bg-plum-950/70 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <Link href="/" className="flex shrink-0 items-center gap-2.5" title={BRAND}>
+            <Link href="/leagues" className="flex shrink-0 items-center gap-2.5" title="My Leagues">
               <Mirrorball size={30} />
               <span className="display hidden text-[15px] font-semibold italic tracking-tight sm:inline sm:text-lg">
                 <span className="gold-text">{BRAND}</span>
@@ -74,6 +74,11 @@ export function Nav({
                         </Link>
                       </li>
                     ))}
+                    <li>
+                      <Link href="/leagues" className="block rounded-lg px-3 py-2 text-sm text-silver-500 hover:bg-gold-400/10">
+                        All my leagues
+                      </Link>
+                    </li>
                     <li>
                       <Link href="/leagues/new" className="block rounded-lg px-3 py-2 text-sm text-silver-500 hover:bg-gold-400/10">
                         + New league
