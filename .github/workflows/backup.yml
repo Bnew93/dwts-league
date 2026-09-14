@@ -1,9 +1,11 @@
 # Nightly data dump of the public schema (PHASE_1_5 §8). Free tier has no managed backups, so this
-# is the safety net: pg_dump via the pooler connection string, gzipped, kept as a workflow artifact
-# for 90 days. Fails loudly when the dump is empty or shrank by more than half since the last run.
+# is the safety net: pg_dump through the Supabase session pooler, gzipped, kept as a workflow
+# artifact for 90 days. Fails loudly when the dump is empty or shrank by more than half since the
+# last run.
 #
-# Required repository secret: SUPABASE_DB_URL  (Supabase → Project Settings → Database → Connection
-# string, "Session" pooler, with the password filled in).
+# Required repository secret: SUPABASE_DB_PASSWORD — the raw Postgres password (Supabase →
+# Project Settings → Database). No URL assembly, no URL-encoding: libpq reads it as-is.
+# Host, user, and database are fixed below; both pooler hostnames for the region are tried.
 name: backup
 
 on:
@@ -14,6 +16,12 @@ on:
 permissions:
   contents: read
   actions: read
+
+env:
+  PGUSER: postgres.kuuvuywwiaoakdpnbqch
+  PGDATABASE: postgres
+  PGPORT: "5432"
+  PGSSLMODE: require
 
 jobs:
   dump:
@@ -26,18 +34,26 @@ jobs:
           sudo apt-get install -y -qq postgresql-client
 
       - name: Dump public schema (data only)
+        id: dump
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          set -euo pipefail
-          test -n "$SUPABASE_DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
-          pg_dump --data-only --schema=public --no-owner --no-privileges "$SUPABASE_DB_URL" > dump.sql
+          set -uo pipefail
+          test -n "$PGPASSWORD" || { echo "SUPABASE_DB_PASSWORD secret is not set"; exit 1; }
+          ok=0
+          for host in aws-0-us-east-1.pooler.supabase.com aws-1-us-east-1.pooler.supabase.com; do
+            echo "trying $host"
+            if pg_dump --data-only --schema=public --no-owner --no-privileges --host "$host" > dump.sql 2> err.txt; then
+              ok=1; echo "connected via $host"; break
+            fi
+            cat err.txt
+          done
+          test "$ok" = 1 || { echo "pg_dump failed on every pooler host"; exit 1; }
           gzip -9 dump.sql
           size=$(stat -c%s dump.sql.gz)
           echo "size=$size" >> "$GITHUB_OUTPUT"
           echo "dump.sql.gz is $size bytes"
           test "$size" -gt 200 || { echo "dump is empty"; exit 1; }
-        id: dump
 
       - name: Compare with the previous dump
         env:

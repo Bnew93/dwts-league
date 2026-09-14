@@ -37,7 +37,7 @@ Next.js 15 (App Router, TypeScript, Tailwind) on Vercel · Supabase (Auth, Postg
 - `npm run seed:episodes` — reference data (add `-- --sql` to print SQL instead)
 - `npm run import-cast` — one-time cast import (Phase 1); season-scoped, no league
 - `npm run snapshot -- <label>` — dump every public table to `backups/<label>.json` (needs `SUPABASE_SERVICE_ROLE_KEY`)
-- `.github/workflows/backup.yml` — nightly `pg_dump --data-only --schema=public` → 90-day artifact `db-dump`; fails if empty or >50% smaller than the last one. Needs repo secret `SUPABASE_DB_URL`.
+- `.github/workflows/backup.yml` — nightly `pg_dump --data-only --schema=public` → 90-day artifact `db-dump`; fails if empty or >50% smaller than the last one. Needs repo secret `SUPABASE_DB_PASSWORD` (raw Postgres password; host/user are fixed in the workflow).
 - `.github/workflows/keepalive.yml` — daily PostgREST ping (`fn_current_season`) so the free project never idles. Needs repo variables `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
 
 ## Season 35 facts (verified Sept 12 from Wikipedia)
