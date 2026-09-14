@@ -36,6 +36,8 @@ Next.js 15 (App Router, TypeScript, Tailwind) on Vercel · Supabase (Auth, Postg
 - `npm test` — unit tests (parser, draft math, standings)
 - `npm run seed:episodes` — reference data (add `-- --sql` to print SQL instead)
 - `npm run import-cast` — one-time cast import (Phase 1); season-scoped, no league
+- `npm run ingest -- --dry-run` — Phase 3 results ingestion (fetch Wikipedia, diff, apply via `fn_apply_results`). `INGEST_MODE=review|apply`; `--fixture <file> --season N` for replays. Core is pure (`lib/ingest/core.ts`, tested against S34 snapshots in `fixtures/`); I/O in `lib/ingest/run.ts`, shared with the admin Run-now button.
+- `.github/workflows/ingest.yml` — Wed 6/9/12/18 ET + Thu 9 ET; repo variable `INGEST_MODE` (default `review` parks diffs on `/admin/ingest`); needs secret `SUPABASE_SERVICE_ROLE_KEY`.
 - `npm run snapshot -- <label>` — dump every public table to `backups/<label>.json` (needs `SUPABASE_SERVICE_ROLE_KEY`)
 - `.github/workflows/backup.yml` — nightly `pg_dump --data-only --schema=public` → 90-day artifact `db-dump`; fails if empty or >50% smaller than the last one. Needs repo secret `SUPABASE_DB_PASSWORD` (raw Postgres password; host/user are fixed in the workflow).
 - `.github/workflows/keepalive.yml` — daily PostgREST ping (`fn_current_season`) so the free project never idles. Needs repo variables `SUPABASE_URL`, `SUPABASE_ANON_KEY`.

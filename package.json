@@ -10,6 +10,7 @@
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "seed:episodes": "tsx scripts/seed-episodes.ts",
     "snapshot": "tsx scripts/snapshot.ts",
+    "ingest": "tsx scripts/ingest.ts",
     "import-cast": "tsx scripts/import-cast.ts"
   },
   "dependencies": {

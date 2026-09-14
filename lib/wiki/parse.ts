@@ -44,6 +44,7 @@ export type ParsedScore = {
 export type ParsedSeason = {
   couples: ParsedCouple[];
   scores: ParsedScore[];
+  placements: ParsedPlacement[];
   warnings: string[];
 };
 
@@ -327,8 +328,54 @@ export function parseScores(html: string, warnings: string[]): ParsedScore[] {
   return scores;
 }
 
+// ---------------------------------------------------------------------------
+// Chart placements ("Pl." column) — the second source for eliminations
+// ---------------------------------------------------------------------------
+
+export type ParsedPlacement = {
+  label: string;
+  celebrityFirst: string;
+  proFirst: string;
+  /** "13th" → 13; blank while the couple is still dancing. */
+  placement: number | null;
+};
+
+/** "1st" → 1, "13th" → 13; anything else → null. */
+export function parseOrdinal(text: string): number | null {
+  const m = /^\s*(\d+)\s*(?:st|nd|rd|th)\b/i.exec(text.replace(/\[.*?\]/g, ""));
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Placement per couple from the scoring chart's "Pl." column. Editors fill it in the week a
+ * couple leaves (fixtures s34-week4 / s34-week6), so it corroborates the cast table's status
+ * cell. Tie conventions vary ("13th" or "14th" for a shared 1st & 2nd) — callers tolerate that.
+ */
+export function parseChartPlacements(html: string, warnings: string[]): ParsedPlacement[] {
+  const grid = findTables(html).map(tableToGrid).find(isScoreTable);
+  if (!grid || grid.length < 3) {
+    warnings.push("scoring chart not found");
+    return [];
+  }
+  const iPl = grid[0].findIndex((c) => /^pl\.?$/i.test(c.text.trim()));
+  if (iPl < 0) {
+    warnings.push("placement column not found");
+    return [];
+  }
+  const out: ParsedPlacement[] = [];
+  for (let r = 2; r < grid.length; r++) {
+    const row = grid[r];
+    const label = row[0]?.text ?? "";
+    const parts = label.split("&").map((s) => s.trim());
+    if (parts.length !== 2) continue;
+    const first = (s: string) => s.split(/\s+/)[0].replace(/\.$/, "");
+    out.push({ label, celebrityFirst: first(parts[0]), proFirst: first(parts[1]), placement: parseOrdinal(row[iPl]?.text ?? "") });
+  }
+  return out;
+}
+
 /** Attach a parsed score row to a couple by first names (celebrity & pro). */
-export function matchScoreToCouple(score: ParsedScore, couples: ParsedCouple[]): ParsedCouple | undefined {
+export function matchScoreToCouple(score: ParsedScore | ParsedPlacement, couples: ParsedCouple[]): ParsedCouple | undefined {
   const f = (s: string) => normalizeKey(s.split(/\s+/)[0]);
   const exact = couples.filter(
     (c) => f(c.celebrity) === normalizeKey(score.celebrityFirst) && f(c.professional) === normalizeKey(score.proFirst),
@@ -347,5 +394,6 @@ export function parseSeasonPage(html: string): ParsedSeason {
   const warnings: string[] = [];
   const couples = parseCouples(html, warnings);
   const scores = parseScores(html, warnings);
-  return { couples, scores, warnings };
+  const placements = parseChartPlacements(html, warnings);
+  return { couples, scores, placements, warnings: Array.from(new Set(warnings)) };
 }

@@ -5,7 +5,8 @@ import { StatusChip } from "@/components/status-chip";
 import { ConfirmForm } from "@/components/confirm-form";
 import { loadShow, weekInfo } from "@/lib/queries";
 import type { IngestRun } from "@/lib/types";
-import { markOut, setPlacement, undoResult, applyIngestRun, dismissIngestRun, saveCast } from "../actions";
+import { markOut, setPlacement, undoResult, applyIngestRun, dismissIngestRun, saveCast, runIngestNow } from "../actions";
+import type { DiffItem } from "@/lib/ingest/core";
 
 export const dynamic = "force-dynamic";
 
@@ -37,33 +38,67 @@ export default async function AdminIngestPage() {
 
       <section className="glass mt-6 p-4">
         <SectionTitle right={`${(runs ?? []).length} recent`}>Ingestion runs</SectionTitle>
-        <p className="text-sm text-silver-500">Automated Wikipedia ingestion arrives in Phase 3. Runs that need review can be applied or dismissed here.</p>
+        <p className="text-sm text-silver-300">
+          The scheduled job reads the season&apos;s Wikipedia page Wednesdays at 6, 9, noon, and 6 PM Eastern (Thursday 9 AM catch-up). A result is applied only when the cast
+          table and the scoring chart agree; anything else waits here for you.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <form action={runIngestNow}>
+            <input type="hidden" name="mode" value="review" />
+            <button className="btn-gold px-3 py-1.5 text-sm">Check now</button>
+          </form>
+          <ConfirmForm action={runIngestNow} message="Fetch Wikipedia and apply every safe result to all leagues now?">
+            <input type="hidden" name="mode" value="apply" />
+            <button className="btn-ghost border-gold-400/50 px-3 py-1.5 text-sm text-gold-200">Check and apply</button>
+          </ConfirmForm>
+          <span className="self-center text-xs text-silver-500">Check now parks any change below for your approval.</span>
+        </div>
         {review.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {review.map((r) => (
-              <li key={r.id} className="rounded-lg border border-gold-400/40 bg-gold-400/10 p-3 text-sm">
-                <div className="text-gold-200">Needs review · {new Date(r.started_at).toLocaleString("en-US", { timeZone: "America/New_York" })}</div>
-                <pre className="mt-2 max-h-40 overflow-auto text-xs text-silver-300">{JSON.stringify(r.diff, null, 1)}</pre>
-                <div className="mt-2 flex gap-2">
-                  <ConfirmForm action={applyIngestRun} message="Apply this diff, including any un-eliminations?">
-                    <input type="hidden" name="run_id" value={r.id} />
-                    <button className="btn-gold px-3 py-1.5 text-sm">Apply</button>
-                  </ConfirmForm>
-                  <form action={dismissIngestRun}>
-                    <input type="hidden" name="run_id" value={r.id} />
-                    <button className="btn-ghost px-3 py-1.5 text-sm">Dismiss</button>
-                  </form>
-                </div>
-              </li>
-            ))}
+          <ul className="mt-4 space-y-2">
+            {review.map((r) => {
+              const items = (Array.isArray(r.diff) ? r.diff : []) as DiffItem[];
+              return (
+                <li key={r.id} className="rounded-lg border border-gold-400/40 bg-gold-400/10 p-3 text-sm">
+                  <div className="text-gold-200">Needs review · {new Date(r.started_at).toLocaleString("en-US", { timeZone: "America/New_York" })}</div>
+                  <ul className="mt-2 space-y-1 text-silver-100">
+                    {items.map((it, i) => (
+                      <li key={i}>
+                        <b>{it.celebrity}</b> → {it.status}
+                        {it.elimination_week != null && ` · week ${it.elimination_week}`}
+                        {it.placement != null && ` · placed ${it.placement}`}
+                        {it.chart_placement != null && <span className="text-silver-500"> · chart {it.chart_placement}</span>}
+                        {it.reason && <span className="block text-xs text-gold-300">{it.reason}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  {r.error && <p className="mt-2 text-xs text-silver-500">{r.error}</p>}
+                  <div className="mt-2 flex gap-2">
+                    <ConfirmForm action={applyIngestRun} message="Apply these changes to every league in the season, including any that un-eliminate a couple?">
+                      <input type="hidden" name="run_id" value={r.id} />
+                      <button className="btn-gold px-3 py-1.5 text-sm">Apply</button>
+                    </ConfirmForm>
+                    <form action={dismissIngestRun}>
+                      <input type="hidden" name="run_id" value={r.id} />
+                      <button className="btn-ghost px-3 py-1.5 text-sm">Dismiss</button>
+                    </form>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
         {(runs ?? []).length > 0 && (
           <ul className="mt-3 divide-y divide-gold-400/10 text-xs text-silver-500">
             {((runs ?? []) as IngestRun[]).map((r) => (
-              <li key={r.id} className="flex justify-between py-1.5">
-                <span>{new Date(r.started_at).toLocaleString("en-US", { timeZone: "America/New_York" })}</span>
-                <span className="text-silver-300">{r.status}</span>
+              <li key={r.id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                <span>
+                  {new Date(r.started_at).toLocaleString("en-US", { timeZone: "America/New_York" })}
+                  {r.error && r.status !== "needs_review" && <span className="ml-2 text-rose-300/80">{r.error}</span>}
+                </span>
+                <span className={r.status === "error" ? "text-rose-300" : r.status === "ok" ? "text-emerald-300" : "text-silver-300"}>
+                  {r.status}
+                  {r.status === "ok" && Array.isArray(r.diff) && ` · ${(r.diff as unknown[]).length} change${(r.diff as unknown[]).length === 1 ? "" : "s"}`}
+                </span>
               </li>
             ))}
           </ul>

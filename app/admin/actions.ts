@@ -5,6 +5,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/league";
 import { logActivity } from "@/lib/activity";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { runIngest, type IngestMode } from "@/lib/ingest/run";
 
 const uuid = z.string().uuid();
 
@@ -135,5 +137,23 @@ export async function saveCast(formData: FormData): Promise<void> {
       p_clear_image: photoChanged && patch.image_url === null,
     });
   }
+  revalidatePath("/", "layout");
+}
+
+/** Run-now from /admin/ingest. Uses the service role like the scheduled job; always forced. */
+export async function runIngestNow(formData: FormData): Promise<void> {
+  const u = await requireAdmin();
+  const mode = z.enum(["review", "apply", "dry"]).parse(formData.get("mode")) as IngestMode;
+  const supabase = createAdminClient();
+  const { data: season } = await supabase.rpc("fn_current_season", { p_show_id: "dwts" });
+  const summary = await runIngest({
+    supabase,
+    showId: "dwts",
+    season: (season as number) ?? 35,
+    page: process.env.WIKI_SEASON_PAGE ?? "Dancing_with_the_Stars_(American_TV_series)_season_35",
+    mode,
+    force: true,
+  });
+  await logActivity("admin.ingest_run", null, { mode, status: summary.status, applied: summary.applied, review: summary.review, run_id: summary.runId, by: u.user.id });
   revalidatePath("/", "layout");
 }

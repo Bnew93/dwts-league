@@ -1,0 +1,49 @@
+# Results ingestion (Phase 3). Reads the season's Wikipedia page, diffs it against the database,
+# and applies eliminations to every league in the season through fn_apply_results.
+#
+# Schedule: Wednesdays 6 AM, 9 AM, noon, 6 PM Eastern and Thursday 9 AM (cron is UTC; these are
+# EDT values and drift an hour later after the November clock change, which is fine). The job
+# skips itself when no episode aired in the previous 48 hours.
+#
+# Repository variable INGEST_MODE: "review" (default) parks every diff for /admin/ingest;
+# "apply" applies the safe part automatically. Secret SUPABASE_SERVICE_ROLE_KEY is required.
+name: ingest
+
+on:
+  schedule:
+    - cron: "0 10,13,16,22 * * 3" # Wed 06:00 / 09:00 / 12:00 / 18:00 EDT
+    - cron: "0 13 * * 4" # Thu 09:00 EDT
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "review | apply | dry"
+        default: "review"
+      force:
+        description: "run even if no episode aired in the last 48h"
+        type: boolean
+        default: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Ingest results
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WIKI_SEASON_PAGE: ${{ vars.WIKI_SEASON_PAGE || 'Dancing_with_the_Stars_(American_TV_series)_season_35' }}
+          INGEST_MODE: ${{ inputs.mode || vars.INGEST_MODE || 'review' }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "SUPABASE_SERVICE_ROLE_KEY secret is not set"; exit 1; }
+          flags=""
+          [ "$INGEST_MODE" = "dry" ] && flags="$flags --dry-run"
+          [ "${{ inputs.force }}" = "true" ] && flags="$flags --force"
+          npx tsx scripts/ingest.ts $flags
