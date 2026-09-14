@@ -8,6 +8,10 @@ import type { Couple } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+type Cell = { w: number; state: "alive" | "out" | "gone" | "future"; color: string; trophy: boolean };
+type Row = { couple: Couple; alive: boolean; cells: Cell[] };
+type Group = { uid: string | null; label: string; color: string; rows: Row[] };
+
 export default async function BracketPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const ctx = await getCtx(slug);
@@ -18,19 +22,9 @@ export default async function BracketPage({ params }: { params: Promise<{ slug: 
   const owners = currentOwners(events);
   const nameOf = (id: string) => members.find((m) => m.id === id)?.display_name ?? "—";
   const idx = (id: string | null | undefined) => (id ? ownerIndex(league.draft_order, id, members) % OWNER_BG.length : -1);
+  const finale = weeks[weeks.length - 1];
 
   const order = league.draft_order ?? ctx.players.map((m) => m.id);
-  const groups = [
-    ...order.map((uid) => ({
-      uid,
-      rows: couples.filter((c) => {
-        const hist = ownershipHistory(events, c.id);
-        return (hist.length ? hist[hist.length - 1].user_id : null) === uid;
-      }),
-    })),
-    { uid: null as string | null, rows: couples.filter((c) => ownershipHistory(events, c.id).length === 0) },
-  ].filter((g) => g.rows.length);
-
   const sortRows = (rows: Couple[]) =>
     [...rows].sort(
       (a, b) => (a.placement ?? 999) - (b.placement ?? 999) || (b.elimination_week ?? 999) - (a.elimination_week ?? 999) || a.cast_order - b.cast_order,
@@ -40,14 +34,86 @@ export default async function BracketPage({ params }: { params: Promise<{ slug: 
     const h = hist.find((h) => w >= h.joined_week && (h.left_week === null || w < h.left_week));
     return h?.user_id ?? null;
   };
-  const finale = weeks[weeks.length - 1];
+  const toRow = (c: Couple): Row => ({
+    couple: c,
+    alive: c.status === "active" || c.status === "finalist",
+    cells: weeks.map((w) => {
+      const ended = c.elimination_week != null && w > c.elimination_week;
+      const dies = c.elimination_week === w && (c.status === "eliminated" || c.status === "withdrew");
+      const o = drafted ? ownerAt(c.id, w) : null;
+      return {
+        w,
+        state: ended ? "gone" : dies ? "out" : aired.has(w) ? "alive" : "future",
+        color: o ? OWNER_BG[idx(o)] : owners.has(c.id) ? OWNER_BG[idx(owners.get(c.id))] : "bg-silver-500/60",
+        trophy: c.placement === 1 && w === finale,
+      };
+    }),
+  });
+
+  const lastOwner = (c: Couple) => {
+    const hist = ownershipHistory(events, c.id);
+    return hist.length ? hist[hist.length - 1].user_id : null;
+  };
+  const groups: Group[] = [
+    ...order.map((uid) => ({ uid, label: nameOf(uid), color: OWNER_TEXT[idx(uid)], rows: sortRows(couples.filter((c) => lastOwner(c) === uid)).map(toRow) })),
+    { uid: null, label: "Leftovers", color: "text-silver-500", rows: sortRows(couples.filter((c) => lastOwner(c) === null)).map(toRow) },
+  ].filter((g) => g.rows.length);
+
+  const stripCols = { gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` };
 
   return (
     <Shell ctx={ctx} wide>
       <PageTitle eyebrow="Season progression" title="Bracket" meta={aired.size ? `${aired.size} of ${weeks.length} weeks aired` : "Pre-season"} />
       {!drafted && <p className="mt-3 text-sm text-silver-500">Lanes take their owner colors once the draft is complete.</p>}
 
-      <div className="glass fade-up -mx-4 mt-5 overflow-x-auto px-2 py-3 sm:mx-0 sm:px-3" style={{ animationDelay: "80ms" }}>
+      {/* Phones: every week fits in one strip beside the name, no sideways scroll. */}
+      <div className="glass fade-up mt-5 py-3 sm:hidden" style={{ animationDelay: "80ms" }}>
+        <div className="flex items-center px-3 text-[11px] text-silver-500">
+          <span className="flex-1">Couple</span>
+          <div className="grid w-[176px] flex-none gap-0.5 text-center" style={stripCols}>
+            {weeks.map((w) => (
+              <span key={w} className={w === current && !aired.has(w) ? "font-semibold text-gold-300" : aired.has(w) ? "text-silver-300" : ""}>
+                {w === finale ? "F" : w}
+              </span>
+            ))}
+          </div>
+        </div>
+        {groups.map((g) => (
+          <div key={g.uid ?? "leftovers"} className="mt-2">
+            <div className={`px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] ${g.color}`}>
+              {g.label}
+              {g.uid && <span className="ml-1.5 font-normal normal-case tracking-normal text-silver-500">· {g.rows.filter((r) => r.alive).length} dancing</span>}
+            </div>
+            {g.rows.map((r) => (
+              <Link key={r.couple.id} href={`/l/${slug}/couples/${r.couple.id}`} className="flex items-center gap-2 px-3 py-1 active:bg-gold-400/10">
+                <CoupleFace couple={r.couple} size={24} ring={r.alive ? "ring-gold-400/50" : "ring-silver-500/30"} />
+                <span className={`min-w-0 flex-1 truncate text-[13px] ${r.alive ? "text-silver-100" : "text-silver-500"}`}>{r.couple.celebrity}</span>
+                <div className="grid w-[176px] flex-none gap-0.5" style={stripCols}>
+                  {r.cells.map((cell) => (
+                    <span
+                      key={cell.w}
+                      className={`flex h-5 items-center justify-center rounded-[3px] text-[10px] font-bold ${
+                        cell.state === "alive"
+                          ? `${cell.color} text-white`
+                          : cell.state === "out"
+                            ? "bg-plum-950/80 text-silver-300 ring-1 ring-inset ring-silver-500/30"
+                            : cell.state === "future"
+                              ? `${cell.color} opacity-20`
+                              : ""
+                      }`}
+                    >
+                      {cell.trophy ? "🏆" : cell.state === "out" ? "✕" : ""}
+                    </span>
+                  ))}
+                </div>
+              </Link>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Tablet and up: the full table. */}
+      <div className="glass fade-up mt-5 hidden overflow-x-auto px-3 py-3 sm:block" style={{ animationDelay: "80ms" }}>
         <table className="border-separate border-spacing-y-1 text-xs" style={{ minWidth: 260 + weeks.length * 42 }}>
           <thead>
             <tr>
@@ -67,27 +133,7 @@ export default async function BracketPage({ params }: { params: Promise<{ slug: 
           </thead>
           <tbody>
             {groups.map((g) => (
-              <GroupRows
-                key={g.uid ?? "leftovers"}
-                slug={slug}
-                label={g.uid ? nameOf(g.uid) : "Leftovers"}
-                color={g.uid ? OWNER_TEXT[idx(g.uid)] : "text-silver-500"}
-                rows={sortRows(g.rows).map((c) => ({
-                  couple: c,
-                  alive: c.status === "active" || c.status === "finalist",
-                  cells: weeks.map((w) => {
-                    const ended = c.elimination_week != null && w > c.elimination_week;
-                    const dies = c.elimination_week === w && (c.status === "eliminated" || c.status === "withdrew");
-                    const o = drafted ? ownerAt(c.id, w) : null;
-                    return {
-                      w,
-                      state: ended ? "gone" : dies ? "out" : aired.has(w) ? "alive" : "future",
-                      color: o ? OWNER_BG[idx(o)] : owners.has(c.id) ? OWNER_BG[idx(owners.get(c.id))] : "bg-silver-500/60",
-                      trophy: c.placement === 1 && w === finale,
-                    } as const;
-                  }),
-                }))}
-              />
+              <GroupRows key={g.uid ?? "leftovers"} slug={slug} label={g.label} color={g.color} rows={g.rows} />
             ))}
           </tbody>
         </table>
@@ -102,14 +148,14 @@ export default async function BracketPage({ params }: { params: Promise<{ slug: 
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-silver-500/60" /> Leftovers
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-silver-500/60 opacity-30" /> upcoming
+        </span>
         <span>✕ eliminated · F finale</span>
       </div>
     </Shell>
   );
 }
-
-type Cell = { w: number; state: "alive" | "out" | "gone" | "future"; color: string; trophy: boolean };
-type Row = { couple: Couple; alive: boolean; cells: Cell[] };
 
 function GroupRows({ slug, label, color, rows }: { slug: string; label: string; color: string; rows: Row[] }) {
   return (
@@ -122,11 +168,11 @@ function GroupRows({ slug, label, color, rows }: { slug: string; label: string; 
       {rows.map((r) => (
         <tr key={r.couple.id} className="group">
           <td className="sticky left-0 z-10 bg-plum-900/95 pl-2 pr-3 backdrop-blur">
-            <Link href={`/l/${slug}/couples/${r.couple.id}`} className="flex w-[132px] items-center gap-2 py-0.5 hover:underline sm:w-[230px]">
+            <Link href={`/l/${slug}/couples/${r.couple.id}`} className="flex w-[230px] items-center gap-2 py-0.5 hover:underline">
               <CoupleFace couple={r.couple} size={30} ring={r.alive ? "ring-gold-400/50" : "ring-silver-500/30"} />
               <span className={`truncate ${r.alive ? "text-silver-100" : "text-silver-500"}`}>
                 {r.couple.celebrity}
-                <span className="hidden text-silver-500/70 sm:inline"> · {r.couple.professional.split(" ")[0]}</span>
+                <span className="text-silver-500/70"> · {r.couple.professional.split(" ")[0]}</span>
               </span>
             </Link>
           </td>
