@@ -14,7 +14,7 @@ export default async function LeaguesPage() {
 
   return (
     <UserShell u={u}>
-      <PageTitle eyebrow={`Hi ${first}`} title="My Leagues" meta={u.memberships.length ? `${u.memberships.length} league${u.memberships.length === 1 ? "" : "s"}` : undefined} />
+      <PageTitle eyebrow={`Hi ${first}`} title="My Leagues" meta={u.memberships.length ? `${u.memberships.length} league${u.memberships.length === 1 ? "" : "s"} · tap one to enter` : undefined} />
 
       {u.memberships.length === 0 ? (
         <div className="mx-auto mt-6 max-w-md">
@@ -38,20 +38,28 @@ export default async function LeaguesPage() {
       ) : (
         <>
           <ul className="stagger mt-5 space-y-2.5">
-            {u.memberships.map((m) => (
-              <li key={m.league_id}>
-                <Link href={`/l/${m.league.slug}`} className="glass glass-hover flex items-center gap-3 p-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="display truncate text-lg font-semibold text-silver-100">{m.league.name}</div>
-                    <div className="mt-0.5 text-xs text-silver-500">
-                      Season {m.league.season} · {m.role === "commissioner" ? "Commissioner" : "Member"}
-                    </div>
-                  </div>
-                  <LeagueStatusChip status={m.league.status} />
-                  <ChevronRight size={18} className="text-silver-500" />
-                </Link>
-              </li>
-            ))}
+            {[...u.memberships]
+              .sort((a, b) => Number(b.league_id === u.current?.league_id) - Number(a.league_id === u.current?.league_id))
+              .map((m) => {
+                const isCurrent = m.league_id === u.current?.league_id;
+                return (
+                  <li key={m.league_id}>
+                    <Link href={`/l/${m.league.slug}`} className={`glass glass-hover flex items-center gap-3 p-4 ${isCurrent ? "border-gold-400/60" : ""}`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="display flex items-center gap-2 text-lg font-semibold text-silver-100">
+                          <span className="truncate">{m.league.name}</span>
+                          {isCurrent && <span className="shrink-0 rounded-full bg-gold-400/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-gold-300">Current</span>}
+                        </div>
+                        <div className="mt-0.5 text-xs text-silver-500">
+                          Season {m.league.season} · {m.role === "commissioner" ? "Commissioner" : "Member"}
+                        </div>
+                      </div>
+                      <LeagueStatusChip status={m.league.status} />
+                      <ChevronRight size={18} className="text-silver-500" />
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
           <Link href="/leagues/new" className="btn-ghost mt-6 text-sm">
             <Plus size={16} /> Start another league

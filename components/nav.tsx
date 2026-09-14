@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, Users, GitBranch, Shield, Sparkles, Gavel, ChevronDown, type LucideIcon } from "lucide-react";
+import { Trophy, Users, GitBranch, Shield, Sparkles, Gavel, ChevronDown, Home, type LucideIcon } from "lucide-react";
 import { Mirrorball } from "./mirrorball";
 import { BRAND } from "@/lib/brand";
 import type { LeagueStatus } from "@/lib/league";
@@ -10,7 +10,7 @@ import type { LeagueStatus } from "@/lib/league";
 export type NavItem = {
   href: string;
   label: string;
-  icon: "draft" | "standings" | "team" | "bracket" | "commissioner" | "admin";
+  icon: "home" | "draft" | "standings" | "team" | "bracket" | "commissioner" | "admin";
   /** match only the exact path (league home) */
   exact?: boolean;
   /** keep the phone tab bar to five: platform-level links live on the wide layout only */
@@ -19,6 +19,7 @@ export type NavItem = {
 export type NavLeague = { slug: string; name: string; status: LeagueStatus };
 
 const ICONS: Record<NavItem["icon"], LucideIcon> = {
+  home: Home,
   draft: Sparkles,
   standings: Trophy,
   team: Users,
@@ -52,7 +53,7 @@ export function Nav({
           <div className="flex min-w-0 items-center gap-2.5">
             <Link href="/leagues" className="flex shrink-0 items-center gap-2.5" title="My Leagues">
               <Mirrorball size={30} />
-              <span className="display hidden text-[15px] font-semibold italic tracking-tight sm:inline sm:text-lg">
+              <span className={`display text-[15px] font-semibold italic tracking-tight sm:inline sm:text-lg ${league ? "hidden" : ""}`}>
                 <span className="gold-text">{BRAND}</span>
               </span>
             </Link>

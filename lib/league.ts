@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { LEAGUE_COLUMNS, PROFILE_COLUMNS } from "@/lib/league-columns";
 
@@ -54,8 +55,12 @@ export type UserCtx = {
   user: { id: string; email: string | null };
   profile: Profile;
   memberships: Membership[];
+  /** the league most recently opened (ff_league cookie), else the first membership, else null */
+  current: Membership | null;
   isPlatformAdmin: boolean;
 };
+
+const LEAGUE_COOKIE = "ff_league";
 
 export type Ctx = UserCtx & {
   league: League;
@@ -106,10 +111,14 @@ export async function getUser(): Promise<UserCtx> {
     .filter((m): m is Membership => m !== null)
     .sort((a, b) => a.league.name.localeCompare(b.league.name));
 
+  const lastSlug = (await cookies()).get(LEAGUE_COOKIE)?.value;
+  const current = memberships.find((m) => m.league.slug === lastSlug) ?? memberships[0] ?? null;
+
   return {
     user: { id: user.id, email: user.email ?? null },
     profile: profile as Profile,
     memberships,
+    current,
     isPlatformAdmin: (profile as Profile).is_platform_admin,
   };
 }

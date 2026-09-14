@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Ctx, UserCtx } from "@/lib/league";
 import { getPendingReveal } from "@/lib/reveal";
 import { Nav, type NavItem, type NavLeague } from "./nav";
+import { HOME_ITEM, leagueNavItems } from "./nav-items";
 import { EliminationReveal } from "./elimination-reveal";
 import { FinaleReveal } from "./finale-reveal";
 
@@ -28,12 +29,7 @@ export async function Shell({
 }) {
   const { league, profile, isCommissioner, isPlayer, isPlatformAdmin } = ctx;
   const base = `/l/${league.slug}`;
-  const items: NavItem[] = [];
-  if (league.status === "setup" || league.status === "drafting") items.push({ href: `${base}/draft`, label: "Draft", icon: "draft" });
-  items.push({ href: base, label: "Standings", icon: "standings", exact: true });
-  if (isPlayer) items.push({ href: `${base}/team`, label: "My Team", icon: "team" });
-  items.push({ href: `${base}/bracket`, label: "Bracket", icon: "bracket" });
-  if (isCommissioner) items.push({ href: `${base}/commissioner`, label: "Commissioner", icon: "commissioner" });
+  const items: NavItem[] = [HOME_ITEM, ...leagueNavItems({ slug: league.slug, status: league.status, isPlayer, isCommissioner })];
   if (isPlatformAdmin) items.push({ href: "/admin", label: "Admin", icon: "admin", desktopOnly: true });
 
   const Wrap = fill ? "div" : Fragment;
@@ -79,9 +75,28 @@ export async function Shell({
   );
 }
 
-/** Chrome for pages outside a league (/leagues, /account, /admin). */
-export function UserShell({ u, children, wide = false, items = [] }: { u: UserCtx; children: React.ReactNode; wide?: boolean; items?: NavItem[] }) {
-  const nav: NavItem[] = [...items];
+/**
+ * Chrome for pages outside a league (/leagues, /account, /admin). The tab bar keeps the current
+ * league's tabs so there is always a way back in; admin pages pass their own items instead.
+ */
+export function UserShell({
+  u,
+  children,
+  wide = false,
+  items,
+}: {
+  u: UserCtx;
+  children: React.ReactNode;
+  wide?: boolean;
+  /** replaces the current league's tabs (admin pages) */
+  items?: NavItem[];
+}) {
+  const nav: NavItem[] = [HOME_ITEM];
+  if (items) nav.push(...items);
+  else if (u.current) {
+    const c = u.current;
+    nav.push(...leagueNavItems({ slug: c.league.slug, status: c.league.status, isPlayer: c.is_player, isCommissioner: c.role === "commissioner" }));
+  }
   if (u.isPlatformAdmin && !nav.some((i) => i.href === "/admin")) nav.push({ href: "/admin", label: "Admin", icon: "admin", desktopOnly: true });
   return (
     <>

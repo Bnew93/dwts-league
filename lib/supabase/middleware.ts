@@ -7,6 +7,8 @@ const PUBLIC_PATHS = ["/login", "/auth", "/join", "/legal", "/opengraph-image", 
 /** last_seen_at is bumped at most once per 10 minutes per user; this cookie is the throttle. */
 const SEEN_COOKIE = "ff_seen";
 const SEEN_TTL = 600;
+/** Slug of the league the user most recently opened; Home and the tab bar key off it. */
+export const LEAGUE_COOKIE = "ff_league";
 
 /**
  * Refreshes the Supabase session cookie, gates every non-public route behind login, and sends the
@@ -61,6 +63,11 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  const leagueMatch = user ? /^\/l\/([a-z0-9-]{2,32})(?:\/|$)/.exec(path) : null;
+  if (leagueMatch && request.cookies.get(LEAGUE_COOKIE)?.value !== leagueMatch[1]) {
+    response.cookies.set(LEAGUE_COOKIE, leagueMatch[1], { maxAge: 365 * 24 * 3600, sameSite: "lax", path: "/" });
   }
 
   if (user && !request.cookies.get(SEEN_COOKIE)) {
