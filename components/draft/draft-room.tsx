@@ -129,7 +129,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
   }
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl flex-col sm:px-4 sm:pt-4">
+    <div className="mx-auto flex h-full w-full max-w-6xl flex-col sm:px-4 sm:pt-4">
       {wrap && <DraftWrap slug={league.slug} season={league.season} order={order} members={members} picks={picks} couples={couples} />}
       {/* On the clock */}
       <div
@@ -154,7 +154,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
             )}
           </div>
           <div
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-mono text-2xl tabular-nums transition-colors ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 font-mono text-2xl tabular-nums transition-colors ${
               urgent ? "animate-pulse-gold bg-rose-600/80 text-white" : myTurn ? "bg-gold-400 text-plum-950" : "bg-plum-800/80 text-silver-100"
             }`}
           >
