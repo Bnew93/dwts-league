@@ -81,7 +81,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
   const openSeats = Math.max(0, league.member_cap - members.length);
 
   return (
-    <div className="lobby relative min-h-[calc(100dvh-53px)] overflow-hidden">
+    <div className="lobby relative min-h-[calc(100dvh-55px)] overflow-hidden">
       <div className="lobby-floor" aria-hidden />
       <div className="lobby-spot left-[5%]" aria-hidden />
       <div className="lobby-spot right-[5%] [animation-direction:alternate-reverse] [animation-duration:13s]" aria-hidden />
@@ -97,7 +97,7 @@ export function Lobby({ league: initial, members, me, isCommissioner, couples }:
       <div className="lobby-scrim" aria-hidden />
 
       {/* center stage */}
-      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-53px)] max-w-3xl content-center justify-items-center px-5 py-10 pb-24 text-center sm:py-14">
+      <section className="relative z-10 mx-auto grid min-h-[calc(100dvh-55px)] max-w-3xl content-center justify-items-center px-5 py-10 pb-24 text-center sm:py-14">
         <div className="eyebrow">Season {league.season} · Draft night</div>
         <h1 className="display mt-2 text-[clamp(32px,7vw,68px)] font-semibold italic leading-none tracking-tight text-silver-100 [text-wrap:balance]">
           {late ? "It's draft time" : target ? "The ballroom opens in" : "Draft night is coming"}

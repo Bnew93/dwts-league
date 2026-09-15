@@ -10,7 +10,7 @@
  *   - the elimination date must map to an episode; otherwise needs-review
  *   - more than MAX_AUTO_CHANGES changes in one run parks the whole run, except the finale
  */
-import type { CoupleStatus, ParsedCouple, ParsedPlacement, ParsedSeason } from "@/lib/wiki/parse";
+import type { CoupleStatus, ParsedCouple, ParsedSeason } from "@/lib/wiki/parse";
 import { matchScoreToCouple } from "@/lib/wiki/parse";
 
 export type DbCouple = {

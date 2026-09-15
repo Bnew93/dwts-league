@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, Plus } from "lucide-react";
 import { getUser } from "@/lib/league";
-import { UserShell, PageTitle } from "@/components/shell";
+import { UserMain, PageTitle } from "@/components/shell";
 import { LeagueStatusChip } from "@/components/league-status";
 import { SHOW_NAME } from "@/lib/brand";
 
@@ -13,7 +13,7 @@ export default async function LeaguesPage() {
   const first = u.profile.display_name.split(" ")[0];
 
   return (
-    <UserShell u={u}>
+    <UserMain>
       <PageTitle eyebrow={`Hi ${first}`} title="My Leagues" meta={u.memberships.length ? `${u.memberships.length} league${u.memberships.length === 1 ? "" : "s"} · tap one to enter` : undefined} />
 
       {u.memberships.length === 0 ? (
@@ -66,6 +66,6 @@ export default async function LeaguesPage() {
           </Link>
         </>
       )}
-    </UserShell>
+    </UserMain>
   );
 }

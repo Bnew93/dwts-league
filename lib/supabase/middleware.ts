@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { sessionUser } from "./auth";
 
 // Public: the landing page (`/`), login, OAuth return, invite landing, legal, and the share-card images crawlers fetch unauthenticated.
 const PUBLIC_PATHS = ["/login", "/auth", "/join", "/legal", "/opengraph-image", "/twitter-image", "/icon", "/robots.txt"];
@@ -43,10 +44,8 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Do not add logic between createServerClient and getUser: it can cause random logouts.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Do not add logic between createServerClient and the session check: it can cause random logouts.
+  const user = await sessionUser(supabase);
 
   const path = request.nextUrl.pathname;
   const isPublic = path === "/" || PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p));

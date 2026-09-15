@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import Link from "next/link";
 import type { Ctx, UserCtx } from "@/lib/league";
 import { getPendingReveal } from "@/lib/reveal";
@@ -7,39 +6,21 @@ import { HOME_ITEM, leagueNavItems } from "./nav-items";
 import { EliminationReveal } from "./elimination-reveal";
 import { FinaleReveal } from "./finale-reveal";
 
+/** Header height (and the mock-mode banner's); pages that lock to the viewport (draft room) subtract them. */
+export const NAV_HEIGHT_PX = 55;
+const MOCK_BANNER_PX = 28;
+
 function navLeagues(u: UserCtx): NavLeague[] {
   return u.memberships.map((m) => ({ slug: m.league.slug, name: m.league.name, status: m.league.status }));
 }
 
-/** Chrome for league pages (/l/[slug]/*). */
-export async function Shell({
-  ctx,
-  children,
-  wide = false,
-  bare = false,
-  fill = false,
-}: {
-  ctx: Ctx;
-  children: React.ReactNode;
-  wide?: boolean;
-  /** no max-width / padding on main */
-  bare?: boolean;
-  /** lock the page to the viewport; children manage their own scrolling */
-  fill?: boolean;
-}) {
+/** The nav for league pages. Rendered by app/l/[slug]/layout so it persists across tab changes. */
+export function LeagueNav({ ctx }: { ctx: Ctx }) {
   const { league, profile, isCommissioner, isPlayer, isPlatformAdmin } = ctx;
-  const base = `/l/${league.slug}`;
   const items: NavItem[] = [HOME_ITEM, ...leagueNavItems({ slug: league.slug, status: league.status, isPlayer, isCommissioner })];
   if (isPlatformAdmin) items.push({ href: "/admin", label: "Admin", icon: "admin", desktopOnly: true });
-
-  const Wrap = fill ? "div" : Fragment;
-  const wrapProps = fill ? { className: "flex h-dvh flex-col overflow-hidden" } : {};
-  // Once-per-elimination reveal (skipped in the live draft room, which has its own overlay).
-  const reveal = fill ? null : await getPendingReveal(ctx);
   return (
-    <Wrap {...wrapProps}>
-      {reveal?.type === "finale" && <FinaleReveal reveal={reveal} me={ctx.user.id} leagueId={league.id} />}
-      {reveal?.type === "elimination" && <EliminationReveal reveal={reveal} me={ctx.user.id} leagueId={league.id} />}
+    <>
       <Nav
         items={items}
         league={{ slug: league.slug, name: league.name, status: league.status }}
@@ -53,44 +34,60 @@ export async function Shell({
           {isCommissioner && (
             <>
               {" "}
-              <Link href={`${base}/commissioner?tab=draft`} className="underline decoration-gold-400/60 hover:text-gold-100">
+              <Link href={`/l/${league.slug}/commissioner?tab=draft`} className="underline decoration-gold-400/60 hover:text-gold-100">
                 End it in Commissioner
               </Link>
             </>
           )}
         </div>
       )}
+    </>
+  );
+}
+
+/** Content wrapper for league pages: reveal overlays + main. The nav comes from the layout. */
+export async function Shell({
+  ctx,
+  children,
+  wide = false,
+  bare = false,
+  fill = false,
+}: {
+  ctx: Ctx;
+  children: React.ReactNode;
+  wide?: boolean;
+  /** no max-width / padding on main */
+  bare?: boolean;
+  /** lock the page to the viewport below the nav; children manage their own scrolling */
+  fill?: boolean;
+}) {
+  // Once-per-elimination reveal (skipped in the live draft room, which has its own overlay).
+  const reveal = fill ? null : await getPendingReveal(ctx);
+  return (
+    <>
+      {reveal?.type === "finale" && <FinaleReveal reveal={reveal} me={ctx.user.id} leagueId={ctx.league.id} />}
+      {reveal?.type === "elimination" && <EliminationReveal reveal={reveal} me={ctx.user.id} leagueId={ctx.league.id} />}
       <main
         className={
           fill
-            ? "min-h-0 w-full flex-1"
+            ? "flex min-h-0 w-full flex-col overflow-hidden"
             : bare
               ? "w-full pb-20 sm:pb-0"
               : `mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`
         }
+        style={fill ? { height: `calc(100dvh - ${NAV_HEIGHT_PX + (ctx.league.is_mock ? MOCK_BANNER_PX : 0)}px)` } : undefined}
       >
         {children}
       </main>
-    </Wrap>
+    </>
   );
 }
 
 /**
- * Chrome for pages outside a league (/leagues, /account, /admin). The tab bar keeps the current
- * league's tabs so there is always a way back in; admin pages pass their own items instead.
+ * The nav for pages outside a league (/leagues, /account, /admin). Keeps the current league's
+ * tabs so there is always a way back in; admin pages pass their own items instead.
  */
-export function UserShell({
-  u,
-  children,
-  wide = false,
-  items,
-}: {
-  u: UserCtx;
-  children: React.ReactNode;
-  wide?: boolean;
-  /** replaces the current league's tabs (admin pages) */
-  items?: NavItem[];
-}) {
+export function UserNav({ u, items }: { u: UserCtx; items?: NavItem[] }) {
   const nav: NavItem[] = [HOME_ITEM];
   if (items) nav.push(...items);
   else if (u.current) {
@@ -98,12 +95,11 @@ export function UserShell({
     nav.push(...leagueNavItems({ slug: c.league.slug, status: c.league.status, isPlayer: c.is_player, isCommissioner: c.role === "commissioner" }));
   }
   if (u.isPlatformAdmin && !nav.some((i) => i.href === "/admin")) nav.push({ href: "/admin", label: "Admin", icon: "admin", desktopOnly: true });
-  return (
-    <>
-      <Nav items={nav} league={null} leagues={navLeagues(u)} displayName={u.profile.display_name} avatarUrl={u.profile.avatar_url} />
-      <main className={`mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>
-    </>
-  );
+  return <Nav items={nav} league={null} leagues={navLeagues(u)} displayName={u.profile.display_name} avatarUrl={u.profile.avatar_url} />;
+}
+
+export function UserMain({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+  return <main className={`mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>;
 }
 
 /** Page title block with an eyebrow and optional right-side meta. */

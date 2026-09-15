@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { sessionUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { LEAGUE_COLUMNS, PROFILE_COLUMNS } from "@/lib/league-columns";
 
@@ -78,13 +80,12 @@ const MEMBERSHIP_SELECT = "league_id, role, is_player, last_reveal_key, leagues!
 
 /**
  * Signed-in user + profile + every membership. Redirects to /login when signed out and signs
- * out disabled accounts. No league is implied: callers route on `memberships`.
+ * out disabled accounts. No league is implied: callers route on `memberships`. Cached per request
+ * so a layout and its page share one lookup.
  */
-export async function getUser(): Promise<UserCtx> {
+export const getUser = cache(async (): Promise<UserCtx> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await sessionUser(supabase);
   if (!user) redirect("/login");
 
   const [{ data: profile, error: profileErr }, { data: rows, error: memberErr }] = await Promise.all([
@@ -115,23 +116,30 @@ export async function getUser(): Promise<UserCtx> {
   const current = memberships.find((m) => m.league.slug === lastSlug) ?? memberships[0] ?? null;
 
   return {
-    user: { id: user.id, email: user.email ?? null },
+    user: { id: user.id, email: user.email },
     profile: profile as Profile,
     memberships,
     current,
     isPlatformAdmin: (profile as Profile).is_platform_admin,
   };
-}
+});
 
 /**
  * League context for /l/[slug]/* pages. 404 when the league does not exist or the user cannot
- * see it; a platform admin who is not a member is sent to the admin drill-in instead.
+ * see it; a platform admin who is not a member is sent to the admin drill-in instead. The league
+ * and its members load in parallel with the user lookup; cached per request for layout + page.
  */
-export async function getCtx(slug: string): Promise<Ctx> {
-  const base = await getUser();
+export const getCtx = cache(async (slug: string): Promise<Ctx> => {
   const supabase = await createClient();
-
-  const { data: league } = await supabase.from("leagues").select(LEAGUE_COLUMNS).eq("slug", slug).maybeSingle();
+  const [base, { data: league }, { data: memberRows }] = await Promise.all([
+    getUser(),
+    supabase.from("leagues").select(LEAGUE_COLUMNS).eq("slug", slug).maybeSingle(),
+    supabase
+      .from("league_members")
+      .select(`is_player, role, joined_at, profiles(${PROFILE_COLUMNS}), leagues!inner(slug)`)
+      .eq("leagues.slug", slug)
+      .order("joined_at"),
+  ]);
   if (!league) notFound();
 
   const membership = base.memberships.find((m) => m.league_id === league.id);
@@ -139,12 +147,6 @@ export async function getCtx(slug: string): Promise<Ctx> {
     if (base.isPlatformAdmin) redirect(`/admin/leagues/${league.id}`);
     notFound();
   }
-
-  const { data: memberRows } = await supabase
-    .from("league_members")
-    .select(`is_player, role, joined_at, profiles(${PROFILE_COLUMNS})`)
-    .eq("league_id", league.id)
-    .order("joined_at");
 
   const members: Member[] = (memberRows ?? [])
     .filter((r) => r.profiles)
@@ -164,7 +166,7 @@ export async function getCtx(slug: string): Promise<Ctx> {
     isCommissioner: membership.role === "commissioner",
     isPlayer: membership.is_player,
   };
-}
+});
 
 /** Where a signed-in user lands after sign-in: My Leagues, always (it doubles as the create-or-join page). */
 export function homePathFor(): string {

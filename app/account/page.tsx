@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getUser } from "@/lib/league";
-import { UserShell, PageTitle, SectionTitle } from "@/components/shell";
+import { UserMain, PageTitle, SectionTitle } from "@/components/shell";
 import { ConfirmForm } from "@/components/confirm-form";
 import { LeagueStatusChip } from "@/components/league-status";
 import { updateDisplayName, leaveLeague, deleteAccount } from "./actions";
@@ -11,7 +11,7 @@ export default async function AccountPage() {
   const u = await getUser();
   const runsSomething = u.memberships.some((m) => m.role === "commissioner");
   return (
-    <UserShell u={u}>
+    <UserMain>
       <PageTitle eyebrow={u.isPlatformAdmin ? "Platform admin" : "Account"} title="Account">
         <p className="mt-1 text-sm text-silver-500">{u.user.email}</p>
       </PageTitle>
@@ -100,6 +100,6 @@ export default async function AccountPage() {
           Terms
         </Link>
       </p>
-    </UserShell>
+    </UserMain>
   );
 }
