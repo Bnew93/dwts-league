@@ -22,7 +22,6 @@ import {
   removeMember,
   transferCommissioner,
   deleteLeague,
-  startMockDraft,
   endMockDraft,
   resetDraft,
   overrideResult,
@@ -224,18 +223,12 @@ export default async function CommissionerPage({ params, searchParams }: { param
             </p>
             {league.is_mock && (
               <p className="mt-3 rounded-lg border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-200">
-                Mock draft in progress. You pick for the proxies in the draft room. Ending the mock removes the proxies and every pick.
+                This league is in mock-draft mode: proxy players hold seats and nothing counts. End it to clear the proxies and every pick, then start the real draft.
               </p>
             )}
             <div className="mt-4 flex flex-wrap items-start gap-2.5">
               {setup && !league.is_mock && (
-                <>
-                  <StartDraftButton leagueId={league.id} slug={slug} players={players.length} cap={league.member_cap} coupleCount={activeCount} disabled={players.length < 2 || math.rosterSize < 1} label="Start draft" />
-                  <form action={startMockDraft}>
-                    <input type="hidden" name="slug" value={slug} />
-                    <button className="btn-ghost border-gold-400/50 text-gold-200">Start mock draft</button>
-                  </form>
-                </>
+                <StartDraftButton leagueId={league.id} slug={slug} players={players.length} cap={league.member_cap} coupleCount={activeCount} disabled={players.length < 2 || math.rosterSize < 1} label="Start draft" />
               )}
               {league.status === "drafting" && (
                 <Link href={`/l/${slug}/draft`} className="btn-gold">
@@ -256,7 +249,6 @@ export default async function CommissionerPage({ params, searchParams }: { param
               )}
               {drafted && <p className="text-sm text-silver-500">The draft is complete{league.draft_completed_at && ` · ${new Date(league.draft_completed_at).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} ET`}.</p>}
             </div>
-            {setup && !league.is_mock && <p className="mt-2 text-xs text-silver-500">A mock draft fills open seats with proxies, lets you pick for them with the real timer, and is fully reversible.</p>}
             {league.draft_order && (
               <ol className="mt-4 flex flex-wrap gap-2 text-sm">
                 {league.draft_order.map((id, i) => {
