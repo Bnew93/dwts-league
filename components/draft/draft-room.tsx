@@ -196,9 +196,9 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
       </div>
 
       {/* Panels: the page itself never scrolls; only the couples list does. */}
-      <div className="grid min-h-0 flex-1 gap-4 px-4 pt-4 sm:grid-cols-[1fr_1.3fr_0.9fr] sm:px-0 sm:pb-4">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] gap-4 px-4 pt-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,0.9fr)] sm:px-0 sm:pb-4">
         {/* Available (scrolls) */}
-        <section className={`flex min-h-0 flex-col ${tab === "available" ? "" : "hidden sm:flex"}`}>
+        <section className={`flex min-h-0 min-w-0 flex-col ${tab === "available" ? "" : "hidden sm:flex"}`}>
           <div className="relative shrink-0">
             <Search size={16} className="pointer-events-none absolute left-3 top-3 text-silver-500" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search couples" className="input-dark pl-9" />
@@ -220,12 +220,12 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
         </section>
 
         {/* Board (fixed) */}
-        <section className={`min-h-0 ${tab === "board" ? "" : "hidden sm:block"}`}>
+        <section className={`min-h-0 min-w-0 overflow-y-auto pb-24 sm:pb-0 ${tab === "board" ? "" : "hidden sm:block"}`}>
           <div className="eyebrow mb-2">Board</div>
           <div className="glass overflow-x-auto p-2.5">
             <div
-              className="grid min-w-[460px] gap-1.5 text-xs"
-              style={{ gridTemplateColumns: `1.5rem repeat(${order.length}, minmax(0, 1fr))` }}
+              className="grid gap-1.5 text-xs"
+              style={{ gridTemplateColumns: `1.5rem repeat(${order.length}, minmax(0, 1fr))`, minWidth: 32 + order.length * 104 }}
             >
               <div className="self-end text-silver-500">Rd</div>
               {order.map((id) => (
@@ -268,7 +268,7 @@ export function DraftRoom({ league: initialLeague, members, me, isCommissioner, 
         </section>
 
         {/* Team (fixed; scrolls only if it must) */}
-        <section className={`min-h-0 overflow-y-auto pb-24 sm:pb-0 ${tab === "team" ? "" : "hidden sm:block"}`}>
+        <section className={`min-h-0 min-w-0 overflow-y-auto pb-24 sm:pb-0 ${tab === "team" ? "" : "hidden sm:block"}`}>
           <div className="eyebrow mb-2">{teamOf === me ? "My team" : `${nameOf(teamOf)}'s team`}</div>
           <ul className="stagger space-y-2">
             {myPicks.map((p) => {
