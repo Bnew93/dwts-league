@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Link2, Sparkles, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { sessionUser } from "@/lib/supabase/auth";
 import { Mirrorball } from "@/components/mirrorball";
 import { BRAND, TAGLINE, SHOW_NAME } from "@/lib/brand";
 
@@ -10,10 +11,7 @@ export const dynamic = "force-dynamic";
 /** Signed out: the landing page. Signed in: straight to My Leagues. */
 export default async function Home() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) redirect("/leagues");
+  if (await sessionUser(supabase)) redirect("/leagues");
 
   const [first, ...rest] = BRAND.split(" ");
   const steps = [

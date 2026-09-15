@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { sessionUser } from "@/lib/supabase/auth";
 import { Mirrorball } from "@/components/mirrorball";
 import { BRAND, TAGLINE } from "@/lib/brand";
 import { appUrl } from "@/lib/url";
@@ -24,9 +25,8 @@ export default async function JoinPage({ params, searchParams }: { params: Promi
   const { token } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();
-  const [{ data: preview }, { data: auth }] = await Promise.all([supabase.rpc("fn_invite_preview", { p_token: token }), supabase.auth.getUser()]);
+  const [{ data: preview }, user] = await Promise.all([supabase.rpc("fn_invite_preview", { p_token: token }), sessionUser(supabase)]);
   const p = (preview ?? { valid: false, reason: "This invite is no longer valid." }) as Preview;
-  const user = auth.user;
 
   // An existing member following the link is just redirected, never duplicated.
   if (user && p.valid && p.already_member && p.slug) redirect(`/l/${p.slug}`);

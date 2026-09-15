@@ -73,7 +73,7 @@ export async function Shell({
             ? "flex min-h-0 w-full flex-col overflow-hidden"
             : bare
               ? "w-full pb-20 sm:pb-0"
-              : `mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`
+              : `mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} overflow-x-clip px-4 pb-24 pt-5 sm:pb-10`
         }
         style={fill ? { height: `calc(100dvh - ${NAV_HEIGHT_PX + (ctx.league.is_mock ? MOCK_BANNER_PX : 0)}px)` } : undefined}
       >
@@ -99,7 +99,7 @@ export function UserNav({ u, items }: { u: UserCtx; items?: NavItem[] }) {
 }
 
 export function UserMain({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
-  return <main className={`mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>;
+  return <main className={`mx-auto w-full ${wide ? "max-w-5xl" : "max-w-3xl"} overflow-x-clip px-4 pb-24 pt-5 sm:pb-10`}>{children}</main>;
 }
 
 /** Page title block with an eyebrow and optional right-side meta. */

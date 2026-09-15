@@ -37,7 +37,7 @@ export function ShareLink({ leagueName, url }: { leagueName: string; url: string
 
   return (
     <div className="mt-4">
-      <div className="break-all rounded-lg border hairline bg-plum-950/60 px-3 py-2.5 font-mono text-xs text-silver-100">{url}</div>
+      <div className="rounded-lg border hairline bg-plum-950/60 px-3 py-2.5 font-mono text-xs text-silver-100 [overflow-wrap:anywhere]">{url}</div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <button onClick={() => copy(url, "url")} className="btn-gold py-3 text-base">
           {copied === "url" ? <Check size={18} /> : <Copy size={18} />} {copied === "url" ? "Copied" : "Copy link"}
@@ -48,7 +48,7 @@ export function ShareLink({ leagueName, url }: { leagueName: string; url: string
           </button>
         )}
       </div>
-      <div className="mt-4 rounded-lg border border-dashed hairline p-3 text-sm text-silver-300">
+      <div className="mt-4 rounded-lg border border-dashed hairline p-3 text-sm text-silver-300 [overflow-wrap:anywhere]">
         {message}
         <button onClick={() => copy(message, "msg")} className="mt-2 block text-xs text-gold-300 underline decoration-gold-400/40">
           {copied === "msg" ? "Copied" : "Copy message"}
